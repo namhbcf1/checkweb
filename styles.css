@@ -2018,6 +2018,7 @@ footer {
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         overscroll-behavior-y: none; /* Ngăn chặn bouncing trên iOS Safari */
+        -webkit-text-size-adjust: 100%; /* Ngăn Safari tự thay đổi kích thước chữ */
     }
     
     /* Đảm bảo các nút bấm có kích thước tối thiểu cho touch */
@@ -2026,11 +2027,80 @@ footer {
     .contact-button, 
     select, 
     .game-card,
-    .brand-option {
+    .brand-option,
+    .component-header,
+    .dropdown {
         min-height: 44px; /* Kích thước tối thiểu để dễ bấm trên iOS */
         min-width: 44px; /* Đảm bảo vùng chạm đủ lớn */
         touch-action: manipulation;
         cursor: pointer;
+        -webkit-appearance: none;
+        appearance: none;
+        transform: translateZ(0); /* Force GPU acceleration */
+        -webkit-transform: translateZ(0);
+    }
+    
+    /* Cải thiện trải nghiệm chạm cho các phần tử tương tác */
+    .game-card:active, 
+    .brand-option:active, 
+    button:active,
+    .action-button:active {
+        transform: scale(0.98) translateY(1px);
+        transition: transform 0.1s;
+    }
+    
+    /* Sửa lỗi selects trên iOS */
+    select.dropdown {
+        background-position: right 12px center; 
+        padding-right: 30px;
+        padding-top: 12px;
+        padding-bottom: 12px;
+        font-size: 16px; /* Ngăn zoom trên iOS */
+        border: 1px solid rgba(0,0,0,0.2);
+        border-radius: 8px;
+    }
+    
+    /* Fix modal cho iOS */
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+    
+    .modal-content {
+        -webkit-overflow-scrolling: touch;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        max-height: 85vh;
+    }
+    
+    /* Fix card layout trên iOS */
+    .game-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 15px;
+        width: 100%;
+        overflow-x: hidden;
+    }
+    
+    /* Cải thiện hiệu năng animation */
+    * {
+        will-change: transform, opacity;
+    }
+    
+    /* Adjust form elements */
+    input, button, textarea, select, .dropdown {
+        -webkit-appearance: none;
+        appearance: none;
+        border-radius: 8px;
+        font-size: 16px; /* Prevent zoom on focus */
     }
     
     /* Fixed position elements on iOS Safari */

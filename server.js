@@ -53,6 +53,17 @@ app.use((req, res, next) => {
 
   // Tối ưu cho Safari và iOS
   res.setHeader('Content-Security-Policy', "default-src 'self' cdnjs.cloudflare.com unpkg.com cdn.jsdelivr.net 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * data: blob:;");
+  
+  // Thêm header đặc biệt cho iOS
+  res.setHeader('X-Apple-Mobile-Web-App-Capable', 'yes');
+  res.setHeader('X-Apple-Mobile-Web-App-Status-Bar-Style', 'black-translucent');
+  
+  // Cache-Control optimized for mobile
+  if (req.path.match(/\.(css|js)$/)) {
+    res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day for CSS/JS
+  } else if (req.path.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+    res.setHeader('Cache-Control', 'public, max-age=604800'); // 1 week for images
+  }
 
   next();
 });
@@ -62,6 +73,12 @@ app.use((req, res, next) => {
   const userAgent = req.headers['user-agent'] || '';
   req.isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|Windows Phone/i.test(userAgent);
   req.isSafariIOS = /iPhone|iPad|iPod/i.test(userAgent) && /WebKit/i.test(userAgent) && !/CriOS|FxiOS|OPiOS/i.test(userAgent);
+  
+  // Log user agent for debugging
+  if (req.isSafariIOS && req.path === '/') {
+    console.log('Safari iOS detected:', userAgent);
+  }
+  
   next();
 });
 
