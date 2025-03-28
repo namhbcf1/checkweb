@@ -7,38 +7,25 @@ const performanceCalculator = require('./performance-calculator.js');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Enable compression
-app.use(compression({ level: 6, threshold: 0 }));
-
-// Configure CORS
+// Enable CORS with specific options
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type']
 }));
 
-// Add security headers and Safari iOS specific headers
+// Enable compression
+app.use(compression());
+
+// Add performance headers
 app.use((req, res, next) => {
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
-    res.setHeader('Cache-Control', 'public, max-age=86400'); // Add caching for better performance
     next();
 });
 
-// Serve static files with caching
-app.use(express.static(path.join(__dirname), {
-    maxAge: '1d',
-    etag: true,
-    setHeaders: (res, path) => {
-        if (path.endsWith('.css') || path.endsWith('.js')) {
-            res.setHeader('Cache-Control', 'public, max-age=86400');
-        } else if (path.endsWith('.jpg') || path.endsWith('.png') || path.endsWith('.webp') || path.endsWith('.svg')) {
-            res.setHeader('Cache-Control', 'public, max-age=604800');
-        }
-    }
-}));
-
+// Serve static files
+app.use(express.static(path.join(__dirname)));
 app.use(express.json());
 
 // API endpoints
@@ -58,27 +45,7 @@ app.post('/api/calculate-performance', (req, res) => {
         res.json(performance);
     } catch (error) {
         console.error('Error calculating performance:', error);
-        const userAgent = req.headers['user-agent'] || '';
-        const isSafariIOS = userAgent.includes('Safari') && userAgent.includes('iPhone') || userAgent.includes('iPad');
-
-        if (isSafariIOS) {
-            res.status(500).json({ error: 'Đã xảy ra lỗi. Vui lòng tải lại trang.' }); //More user friendly error message for Safari iOS
-        } else {
-            res.status(500).json({ error: 'Internal server error', details: error.message });
-        }
-    }
-});
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    const userAgent = req.headers['user-agent'] || '';
-    const isSafariIOS = userAgent.includes('Safari') && (userAgent.includes('iPhone') || userAgent.includes('iPad'));
-
-    if (isSafariIOS) {
-        res.status(500).send('Đã xảy ra lỗi. Vui lòng thử lại sau.'); //User friendly error
-    } else {
-        res.status(500).json({ error: 'Something broke!', details: err.message });
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 

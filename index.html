@@ -3,10 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <!-- Cấu hình viewport tối ưu cho Safari iOS -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BUILD PC TRUONG PHAT COMPUTER - Chọn Linh Kiện Máy Tính</title>
     <link rel="stylesheet" href="./buildsan.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -15,186 +12,124 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script>
-        // Safari iOS compatibility layer
-        (function() {
-            // Fix for "exports is not defined" errors
-            if (typeof exports === 'undefined') {
-                window.exports = {};
-                window.module = { exports: window.exports };
-            }
-            
-            // Fix for 'require is not defined' error
-            if (typeof require === 'undefined') {
-                window.require = function(module) {
-                    console.log('Mock require called for:', module);
-                    return {};
-                };
-            }
-            
-            // Fix for "process is not defined" error
-            if (typeof process === 'undefined') {
-                window.process = {
-                    env: { NODE_ENV: 'production' },
-                    browser: true,
-                    versions: { node: false }
-                };
-            }
-            
-            // Prevent Safari from infinite recursion issues
-            const MAX_CACHED_ELEMENTS = 1000; // Limit cache size to prevent memory leaks
-            const computedStyleCache = new Map();
-            
-            // Safe original method storage
-            const originalGetComputedStyle = window.getComputedStyle;
-            
-            // Override with a safer implementation for Safari
-            window.getComputedStyle = function(element, pseudoElt) {
-                if (!element) return null;
-                
-                // Generate a cache key
-                const cacheKey = element.tagName + (pseudoElt || '');
-                
-                // Check cache first
-                if (computedStyleCache.has(cacheKey)) {
-                    return computedStyleCache.get(cacheKey);
-                }
-                
-                try {
-                    // Handle problematic elements that might cause recursion in Safari
-                    if (element instanceof HTMLCanvasElement || 
-                        element instanceof HTMLImageElement ||
-                        element instanceof SVGElement ||
-                        element instanceof HTMLScriptElement ||
-                        element instanceof HTMLIFrameElement) {
-                        
-                        const safeStyle = {
-                            getPropertyValue: function(prop) { return ''; },
-                            setProperty: function() {},
-                            removeProperty: function() {},
-                            item: function() { return ''; },
-                            getPropertyPriority: function() { return ''; },
-                            length: 0
-                        };
-                        
-                        // Limit cache size
-                        if (computedStyleCache.size > MAX_CACHED_ELEMENTS) {
-                            computedStyleCache.clear(); // Reset if too large
-                        }
-                        
-                        computedStyleCache.set(cacheKey, safeStyle);
-                        return safeStyle;
-                    }
-                    
-                    // Normal case
-                    const result = originalGetComputedStyle.call(window, element, pseudoElt);
-                    
-                    // Limit cache size
-                    if (computedStyleCache.size > MAX_CACHED_ELEMENTS) {
-                        computedStyleCache.clear();
-                    }
-                    
-                    computedStyleCache.set(cacheKey, result);
-                    return result;
-                } catch (e) {
-                    console.warn('Error in getComputedStyle:', e);
-                    return {
-                        getPropertyValue: function() { return ''; },
-                        setProperty: function() {}
-                    };
-                }
+        // Fix for "exports is not defined" errors
+        if (typeof exports === 'undefined') {
+            window.exports = {};
+            window.module = { exports: window.exports };
+        }
+        
+        // Fix for 'require is not defined' error
+        if (typeof require === 'undefined') {
+            window.require = function(module) {
+                console.log('Mock require called for:', module);
+                return {};
             };
+        }
+        
+        // Fix for "process is not defined" error
+        if (typeof process === 'undefined') {
+            window.process = {
+                env: { NODE_ENV: 'production' },
+                browser: true,
+                versions: { node: false }
+            };
+        }
+        
+        // Fix for potential infinite recursion in getWindow/getComputedStyle
+        const originalGetComputedStyle = window.getComputedStyle;
+        const computedStyleCache = new WeakMap();
+        
+        window.getComputedStyle = function(element, pseudoElt) {
+            if (!element) return null;
             
-            // Create safe methods for touch events
-            try {
-                // Fix for Safari issues with passive event listeners
-                const originalAddEventListener = EventTarget.prototype.addEventListener;
-                EventTarget.prototype.addEventListener = function(type, listener, options) {
-                    const safeOptions = options || {};
-                    if (type === 'touchstart' || type === 'touchmove' || type === 'wheel') {
-                        if (typeof safeOptions === 'object') {
-                            safeOptions.passive = safeOptions.passive || false;
-                        }
-                    }
-                    return originalAddEventListener.call(this, type, listener, safeOptions);
-                };
-            } catch (e) {
-                console.warn('Failed to patch addEventListener:', e);
+            // Return cached result if available
+            if (computedStyleCache.has(element)) {
+                return computedStyleCache.get(element);
             }
             
-            // Prevent problematic property assignments
-            const readOnlyProps = ['top', 'parent', 'self', 'window', 'frames', 'location'];
-            readOnlyProps.forEach(prop => {
-                try {
-                    // Create safe accessors
-                    const originalValue = window[prop];
-                    let safeValue = originalValue;
-                    
-                    Object.defineProperty(window, prop + '_safe', {
-                        get: function() { return safeValue; },
-                        set: function(val) { safeValue = val; },
-                        configurable: true
-                    });
-                } catch (e) {
-                    console.warn(`Could not create safe property for ${prop}:`, e);
+            try {
+                // Handle special element types that might cause recursion
+                if (element instanceof HTMLCanvasElement || 
+                    element instanceof HTMLImageElement ||
+                    element instanceof SVGElement ||
+                    element instanceof HTMLScriptElement) {
+                    const defaultStyle = {
+                        getPropertyValue: () => '',
+                        setProperty: () => {},
+                    };
+                    computedStyleCache.set(element, defaultStyle);
+                    return defaultStyle;
                 }
-            });
-            
-            // iOS-specific touch event improvements
-            document.addEventListener('touchmove', function(e) {
-                if (e.scale !== 1) {
-                    e.preventDefault();
+                
+                const result = originalGetComputedStyle.call(window, element, pseudoElt);
+                computedStyleCache.set(element, result);
+                return result;
+            } catch (e) {
+                console.warn('Error in getComputedStyle:', e);
+                return originalGetComputedStyle.call(window, document.body); // Fallback
+            }
+        };
+        
+        // Fix for read-only window properties
+        const windowProxy = new Proxy(window, {
+            set(target, prop, value) {
+                if (['top', 'parent', 'self', 'window', 'frames', 'location'].includes(prop)) {
+                    const safeProp = `${prop}_safe`;
+                    try {
+                        Object.defineProperty(target, safeProp, {
+                            value,
+                            writable: true,
+                            configurable: true
+                        });
+                        console.log(`Created safe property '${safeProp}' for read-only '${prop}'`);
+                        return true;
+                    } catch (e) {
+                        console.warn(`Could not create safe property for ${prop}:`, e);
+                        return true; // Prevent error
+                    }
                 }
-            }, { passive: false });
-            
-            // Prevent double-tap zoom on iOS Safari
-            let lastTouchEnd = 0;
-            document.addEventListener('touchend', function(e) {
-                const now = Date.now();
-                if (now - lastTouchEnd < 300) {
-                    e.preventDefault();
-                }
-                lastTouchEnd = now;
-            }, { passive: false });
-        })();
+                target[prop] = value;
+                return true;
+            }
+        });
+        
+        // Apply the proxy
+        try {
+            if (typeof globalThis !== 'undefined') {
+                globalThis.windowProxy = windowProxy;
+            }
+        } catch (e) {
+            console.warn('Failed to create window proxy:', e);
+        }
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/tippy.js@6"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tippy.js@6/dist/tippy.css">
 </head>
 
 <body>
     <header>
-        <div class="header-wrapper">
-            <div class="logo-container">
-                <div class="logo">
-                    <i class="fas fa-desktop"></i>
-                    <span>TRUONG PHAT COMPUTER</span>
-                    <div class="logo-glow"></div>
-                </div>
+        <div class="logo-container">
+            <div class="logo">
+                <i class="fas fa-desktop"></i>
+                <span>TRUONG PHAT COMPUTER</span>
             </div>
-            <div class="contact-buttons">
-                <a href="https://zalo.me/0836768597" target="_blank" class="contact-button zalo-button">
-                    <i class="fab fa-zalo"></i> 
-                    <span class="button-text">Liên hệ qua Zalo</span>
-                    <span class="button-hover-text">Chat Ngay</span>
-                </a>
-                <div class="phone-number">
-                    <a href="tel:0836768597" class="phone-link">
-                        <div class="phone-icon-container">
-                            <i class="fas fa-phone-alt"></i>
-                        </div>
-                        <span>0836768597</span>
-                    </a>
-                </div>
-                <a href="https://www.facebook.com/tpcom.hb" target="_blank" class="contact-button facebook-button">
-                    <i class="fab fa-facebook"></i>
-                    <span class="button-text">Liên hệ qua Facebook</span>
-                    <span class="button-hover-text">Theo dõi</span>
+        </div>
+        <div class="contact-buttons">
+            <a href="https://zalo.me/0836768597" target="_blank" class="contact-button">
+                <i class="fab fa-zalo"></i> Liên hệ qua Zalo
+            </a>
+            <div class="phone-number">
+                <a href="tel:0836768597">
+                    <i class="fas fa-phone-alt"></i>
+                    <span>0836768597</span>
                 </a>
             </div>
+            <a href="https://www.facebook.com/tpcom.hb" target="_blank" class="contact-button">
+                <i class="fab fa-facebook"></i> Liên hệ qua Facebook
+            </a>
         </div>
     </header>
 
