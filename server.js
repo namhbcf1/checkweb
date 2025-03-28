@@ -21,6 +21,10 @@ app.use(compression());
 app.use((req, res, next) => {
     res.setHeader('Cache-Control', 'public, max-age=31536000');
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-UA-Compatible', 'IE=edge,chrome=1');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Content-Security-Policy', "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: https: http:;");
     next();
 });
 
