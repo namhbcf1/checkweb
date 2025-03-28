@@ -1,32 +1,13 @@
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
-const compression = require('compression');
 const performanceCalculator = require('./performance-calculator.js');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Enable CORS with specific options
-app.use(cors({
-    origin: '*',
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type']
-}));
-
-// Enable compression
-app.use(compression());
-
-// Add performance headers
-app.use((req, res, next) => {
-    res.setHeader('Cache-Control', 'public, max-age=31536000');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-UA-Compatible', 'IE=edge,chrome=1');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-    res.setHeader('Content-Security-Policy', "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: https: http:;");
-    next();
-});
+// Enable CORS
+app.use(cors());
 
 // Serve static files
 app.use(express.static(path.join(__dirname)));
@@ -36,7 +17,7 @@ app.use(express.json());
 app.post('/api/calculate-performance', (req, res) => {
     try {
         const { cpuScore, gpuScore, gameType } = req.body;
-
+        
         const performance = {
             game: performanceCalculator.calculateGamePerformance(cpuScore, gpuScore),
             graphics: performanceCalculator.calculateGraphicsPerformance(cpuScore, gpuScore),
@@ -45,7 +26,7 @@ app.post('/api/calculate-performance', (req, res) => {
             stability: performanceCalculator.calculateStability(cpuScore, gpuScore),
             tips: performanceCalculator.generatePerformanceTips(gameType, cpuScore, gpuScore)
         };
-
+        
         res.json(performance);
     } catch (error) {
         console.error('Error calculating performance:', error);
@@ -56,4 +37,4 @@ app.post('/api/calculate-performance', (req, res) => {
 // Start server
 app.listen(port, '0.0.0.0', () => {
     console.log(`Server running at http://0.0.0.0:${port}`);
-});
+}); 
