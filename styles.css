@@ -42,24 +42,19 @@
 
 /* CSS Variables for easier theming */
 :root {
-    --primary-color: #29b6f6;
-    /* Màu chính - Xanh dương sáng */
+    --primary-color: #2196f3;
     --secondary-color: #1976d2;
-    /* Màu phụ - Xanh dương đậm */
-    --background-color: #e3f2fd;
-    /* Màu nền - Xanh rất nhạt */
-    --text-color: #333;
-    /* Màu chữ chính */
+    --accent-color: #ff4081;
+    --background-color: #f5f7fa;
+    --text-color: #2c3e50;
     --card-background: #ffffff;
-    /* Màu nền card */
     --border-color: #e0e0e0;
-    /* Màu viền */
-    --hover-border-color: #bbdefb;
-    /* Màu viền khi hover */
-    --box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
-    /* Bóng đổ */
-    --transition-speed: 0.3s;
-    /* Tốc độ hiệu ứng */
+    --success-color: #4caf50;
+    --warning-color: #ff9800;
+    --error-color: #f44336;
+    --hover-transition: all 0.3s ease;
+    --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --hover-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
 }
 
 body {
@@ -308,7 +303,7 @@ header .phone-number i {
         flex-direction: column;
         gap: 10px;
     }
-    
+
     header .phone-number,
     header .contact-buttons a {
         width: 80%;
@@ -979,8 +974,7 @@ header {
     top: 30px;
     left: 0;
     right: 0;
-    height: 3px;
-    background-color: var(--light-gray);
+    height: 3px;background-color: var(--light-gray);
     z-index: -1;
 }
 
@@ -1791,33 +1785,33 @@ footer {
     .components-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .main-container {
         padding: 10px;
     }
-    
+
     .selection-section {
         padding: 15px;
     }
-    
+
     .game-grid {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
-    
+
     .action-button {
         width: 100%;
         margin: 5px 0;
     }
-    
+
     .component-card {
         width: 100%;
     }
-    
+
     .modal-content {
         width: 95%;
         margin: 10% auto;
     }
-    
+
     .chart-container {
         height: 250px;
     }
@@ -1844,7 +1838,7 @@ footer {
         flex-direction: column;
         gap: 10px;
     }
-    
+
     header .phone-number,
     header .contact-buttons a {
         width: 80%;
