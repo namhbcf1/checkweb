@@ -1,16 +1,37 @@
+
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
+const compression = require('compression');
 const performanceCalculator = require('./performance-calculator.js');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Enable CORS
-app.use(cors());
+// Enable compression
+app.use(compression());
 
-// Serve static files
-app.use(express.static(path.join(__dirname)));
+// Configure CORS
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type']
+}));
+
+// Add security headers
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    next();
+});
+
+// Serve static files with caching
+app.use(express.static(path.join(__dirname), {
+    maxAge: '1d',
+    etag: true
+}));
+
 app.use(express.json());
 
 // API endpoints
@@ -30,11 +51,17 @@ app.post('/api/calculate-performance', (req, res) => {
         res.json(performance);
     } catch (error) {
         console.error('Error calculating performance:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Internal server error', details: error.message });
     }
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ error: 'Something broke!', details: err.message });
 });
 
 // Start server
 app.listen(port, '0.0.0.0', () => {
     console.log(`Server running at http://0.0.0.0:${port}`);
-}); 
+});

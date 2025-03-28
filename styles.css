@@ -1791,6 +1791,37 @@ footer {
     .components-grid {
         grid-template-columns: 1fr;
     }
+    
+    .main-container {
+        padding: 10px;
+    }
+    
+    .selection-section {
+        padding: 15px;
+    }
+    
+    .game-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+    
+    .action-button {
+        width: 100%;
+        margin: 5px 0;
+    }
+    
+    .component-card {
+        width: 100%;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+    }
+    
+    .chart-container {
+        height: 250px;
+    }
+}
 
     .cpu-brand-selection {
         gap: 15px;
