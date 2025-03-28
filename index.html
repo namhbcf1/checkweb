@@ -3,8 +3,10 @@
 
 <head>
     <meta charset="UTF-8">
-    <!-- Đặt viewport cố định để hiển thị giao diện PC trên mọi thiết bị -->
-    <meta name="viewport" content="width=1024">
+    <!-- Cấu hình viewport tối ưu cho Safari iOS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>BUILD PC TRUONG PHAT COMPUTER - Chọn Linh Kiện Máy Tính</title>
     <link rel="stylesheet" href="./buildsan.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -13,95 +15,147 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script>
-        // Fix for "exports is not defined" errors
-        if (typeof exports === 'undefined') {
-            window.exports = {};
-            window.module = { exports: window.exports };
-        }
-        
-        // Fix for 'require is not defined' error
-        if (typeof require === 'undefined') {
-            window.require = function(module) {
-                console.log('Mock require called for:', module);
-                return {};
-            };
-        }
-        
-        // Fix for "process is not defined" error
-        if (typeof process === 'undefined') {
-            window.process = {
-                env: { NODE_ENV: 'production' },
-                browser: true,
-                versions: { node: false }
-            };
-        }
-        
-        // Fix for potential infinite recursion in getWindow/getComputedStyle
-        const originalGetComputedStyle = window.getComputedStyle;
-        const computedStyleCache = new WeakMap();
-        
-        window.getComputedStyle = function(element, pseudoElt) {
-            if (!element) return null;
-            
-            // Return cached result if available
-            if (computedStyleCache.has(element)) {
-                return computedStyleCache.get(element);
+        // Safari iOS compatibility layer
+        (function() {
+            // Fix for "exports is not defined" errors
+            if (typeof exports === 'undefined') {
+                window.exports = {};
+                window.module = { exports: window.exports };
             }
             
-            try {
-                // Handle special element types that might cause recursion
-                if (element instanceof HTMLCanvasElement || 
-                    element instanceof HTMLImageElement ||
-                    element instanceof SVGElement ||
-                    element instanceof HTMLScriptElement) {
-                    const defaultStyle = {
-                        getPropertyValue: () => '',
-                        setProperty: () => {},
-                    };
-                    computedStyleCache.set(element, defaultStyle);
-                    return defaultStyle;
+            // Fix for 'require is not defined' error
+            if (typeof require === 'undefined') {
+                window.require = function(module) {
+                    console.log('Mock require called for:', module);
+                    return {};
+                };
+            }
+            
+            // Fix for "process is not defined" error
+            if (typeof process === 'undefined') {
+                window.process = {
+                    env: { NODE_ENV: 'production' },
+                    browser: true,
+                    versions: { node: false }
+                };
+            }
+            
+            // Prevent Safari from infinite recursion issues
+            const MAX_CACHED_ELEMENTS = 1000; // Limit cache size to prevent memory leaks
+            const computedStyleCache = new Map();
+            
+            // Safe original method storage
+            const originalGetComputedStyle = window.getComputedStyle;
+            
+            // Override with a safer implementation for Safari
+            window.getComputedStyle = function(element, pseudoElt) {
+                if (!element) return null;
+                
+                // Generate a cache key
+                const cacheKey = element.tagName + (pseudoElt || '');
+                
+                // Check cache first
+                if (computedStyleCache.has(cacheKey)) {
+                    return computedStyleCache.get(cacheKey);
                 }
                 
-                const result = originalGetComputedStyle.call(window, element, pseudoElt);
-                computedStyleCache.set(element, result);
-                return result;
-            } catch (e) {
-                console.warn('Error in getComputedStyle:', e);
-                return originalGetComputedStyle.call(window, document.body); // Fallback
-            }
-        };
-        
-        // Fix for read-only window properties
-        const windowProxy = new Proxy(window, {
-            set(target, prop, value) {
-                if (['top', 'parent', 'self', 'window', 'frames', 'location'].includes(prop)) {
-                    const safeProp = `${prop}_safe`;
-                    try {
-                        Object.defineProperty(target, safeProp, {
-                            value,
-                            writable: true,
-                            configurable: true
-                        });
-                        console.log(`Created safe property '${safeProp}' for read-only '${prop}'`);
-                        return true;
-                    } catch (e) {
-                        console.warn(`Could not create safe property for ${prop}:`, e);
-                        return true; // Prevent error
+                try {
+                    // Handle problematic elements that might cause recursion in Safari
+                    if (element instanceof HTMLCanvasElement || 
+                        element instanceof HTMLImageElement ||
+                        element instanceof SVGElement ||
+                        element instanceof HTMLScriptElement ||
+                        element instanceof HTMLIFrameElement) {
+                        
+                        const safeStyle = {
+                            getPropertyValue: function(prop) { return ''; },
+                            setProperty: function() {},
+                            removeProperty: function() {},
+                            item: function() { return ''; },
+                            getPropertyPriority: function() { return ''; },
+                            length: 0
+                        };
+                        
+                        // Limit cache size
+                        if (computedStyleCache.size > MAX_CACHED_ELEMENTS) {
+                            computedStyleCache.clear(); // Reset if too large
+                        }
+                        
+                        computedStyleCache.set(cacheKey, safeStyle);
+                        return safeStyle;
                     }
+                    
+                    // Normal case
+                    const result = originalGetComputedStyle.call(window, element, pseudoElt);
+                    
+                    // Limit cache size
+                    if (computedStyleCache.size > MAX_CACHED_ELEMENTS) {
+                        computedStyleCache.clear();
+                    }
+                    
+                    computedStyleCache.set(cacheKey, result);
+                    return result;
+                } catch (e) {
+                    console.warn('Error in getComputedStyle:', e);
+                    return {
+                        getPropertyValue: function() { return ''; },
+                        setProperty: function() {}
+                    };
                 }
-                target[prop] = value;
-                return true;
+            };
+            
+            // Create safe methods for touch events
+            try {
+                // Fix for Safari issues with passive event listeners
+                const originalAddEventListener = EventTarget.prototype.addEventListener;
+                EventTarget.prototype.addEventListener = function(type, listener, options) {
+                    const safeOptions = options || {};
+                    if (type === 'touchstart' || type === 'touchmove' || type === 'wheel') {
+                        if (typeof safeOptions === 'object') {
+                            safeOptions.passive = safeOptions.passive || false;
+                        }
+                    }
+                    return originalAddEventListener.call(this, type, listener, safeOptions);
+                };
+            } catch (e) {
+                console.warn('Failed to patch addEventListener:', e);
             }
-        });
-        
-        // Apply the proxy
-        try {
-            if (typeof globalThis !== 'undefined') {
-                globalThis.windowProxy = windowProxy;
-            }
-        } catch (e) {
-            console.warn('Failed to create window proxy:', e);
-        }
+            
+            // Prevent problematic property assignments
+            const readOnlyProps = ['top', 'parent', 'self', 'window', 'frames', 'location'];
+            readOnlyProps.forEach(prop => {
+                try {
+                    // Create safe accessors
+                    const originalValue = window[prop];
+                    let safeValue = originalValue;
+                    
+                    Object.defineProperty(window, prop + '_safe', {
+                        get: function() { return safeValue; },
+                        set: function(val) { safeValue = val; },
+                        configurable: true
+                    });
+                } catch (e) {
+                    console.warn(`Could not create safe property for ${prop}:`, e);
+                }
+            });
+            
+            // iOS-specific touch event improvements
+            document.addEventListener('touchmove', function(e) {
+                if (e.scale !== 1) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            
+            // Prevent double-tap zoom on iOS Safari
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', function(e) {
+                const now = Date.now();
+                if (now - lastTouchEnd < 300) {
+                    e.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, { passive: false });
+        })();
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

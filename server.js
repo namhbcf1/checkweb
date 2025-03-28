@@ -1,4 +1,3 @@
-
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
@@ -9,7 +8,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Enable compression
-app.use(compression());
+app.use(compression({ level: 6, threshold: 0 }));
 
 // Configure CORS
 app.use(cors({
@@ -18,18 +17,26 @@ app.use(cors({
     allowedHeaders: ['Content-Type']
 }));
 
-// Add security headers
+// Add security headers and Safari iOS specific headers
 app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Cache-Control', 'public, max-age=86400'); // Add caching for better performance
     next();
 });
 
 // Serve static files with caching
 app.use(express.static(path.join(__dirname), {
     maxAge: '1d',
-    etag: true
+    etag: true,
+    setHeaders: (res, path) => {
+        if (path.endsWith('.css') || path.endsWith('.js')) {
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+        } else if (path.endsWith('.jpg') || path.endsWith('.png') || path.endsWith('.webp') || path.endsWith('.svg')) {
+            res.setHeader('Cache-Control', 'public, max-age=604800');
+        }
+    }
 }));
 
 app.use(express.json());
@@ -38,7 +45,7 @@ app.use(express.json());
 app.post('/api/calculate-performance', (req, res) => {
     try {
         const { cpuScore, gpuScore, gameType } = req.body;
-        
+
         const performance = {
             game: performanceCalculator.calculateGamePerformance(cpuScore, gpuScore),
             graphics: performanceCalculator.calculateGraphicsPerformance(cpuScore, gpuScore),
@@ -47,18 +54,32 @@ app.post('/api/calculate-performance', (req, res) => {
             stability: performanceCalculator.calculateStability(cpuScore, gpuScore),
             tips: performanceCalculator.generatePerformanceTips(gameType, cpuScore, gpuScore)
         };
-        
+
         res.json(performance);
     } catch (error) {
         console.error('Error calculating performance:', error);
-        res.status(500).json({ error: 'Internal server error', details: error.message });
+        const userAgent = req.headers['user-agent'] || '';
+        const isSafariIOS = userAgent.includes('Safari') && userAgent.includes('iPhone') || userAgent.includes('iPad');
+
+        if (isSafariIOS) {
+            res.status(500).json({ error: 'Đã xảy ra lỗi. Vui lòng tải lại trang.' }); //More user friendly error message for Safari iOS
+        } else {
+            res.status(500).json({ error: 'Internal server error', details: error.message });
+        }
     }
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
-    res.status(500).json({ error: 'Something broke!', details: err.message });
+    const userAgent = req.headers['user-agent'] || '';
+    const isSafariIOS = userAgent.includes('Safari') && (userAgent.includes('iPhone') || userAgent.includes('iPad'));
+
+    if (isSafariIOS) {
+        res.status(500).send('Đã xảy ra lỗi. Vui lòng thử lại sau.'); //User friendly error
+    } else {
+        res.status(500).json({ error: 'Something broke!', details: err.message });
+    }
 });
 
 // Start server

@@ -1939,7 +1939,7 @@ footer {
     font-size: 0.9rem;
 }
 
-/* Responsive */
+/* Responsive & iOS Safari Optimization */
 @media (max-width: 768px) {
     .components-grid {
         grid-template-columns: 1fr;
@@ -1974,8 +1974,7 @@ footer {
     .chart-container {
         height: 250px;
     }
-}
-
+    
     .cpu-brand-selection {
         gap: 15px;
     }
@@ -2003,6 +2002,88 @@ footer {
         width: 80%;
         justify-content: center;
     }
+}
+
+/* Safari iOS Specific */
+@supports (-webkit-touch-callout: none) {
+    /* Áp dụng cho iOS */
+    body {
+        -webkit-overflow-scrolling: touch; /* Cuộn mượt trên iOS */
+        -webkit-tap-highlight-color: transparent; /* Tắt hiệu ứng highlight khi touch */
+        touch-action: manipulation; /* Loại bỏ delay 300ms trên iOS */
+    }
+    
+    /* Đảm bảo các nút bấm có kích thước tối thiểu cho touch */
+    button, 
+    .action-button, 
+    .contact-button, 
+    select, 
+    .game-card {
+        min-height: 44px; /* Kích thước tối thiểu để dễ bấm trên iOS */
+    }
+    
+    /* Cải thiện hiệu suất cuộn */
+    .components-grid,
+    .game-grid,
+    .performance-section,
+    .modal-body {
+        will-change: transform; /* Gợi ý trình duyệt tối ưu hiệu năng */
+        transform: translateZ(0); /* Force GPU acceleration */
+        -webkit-backface-visibility: hidden; /* Tối ưu hiệu suất */
+    }
+    
+    /* Fix cho các animation trên Safari iOS */
+    @keyframes safari-friendly-animation {
+        0% { transform: translateZ(0); }
+        100% { transform: translateZ(0); }
+    }
+    
+    /* Fix các vấn đề với select dropdown trên iOS */
+    select {
+        -webkit-appearance: none;
+        background-position: right 10px center; 
+        padding-right: 30px;
+        border-radius: 8px;
+    }
+    
+    /* Fix cho modal trên iOS */
+    .modal-content {
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Tối ưu input fields trên iOS */
+    input {
+        -webkit-appearance: none;
+        border-radius: 8px;
+    }
+    
+    /* Tối ưu hiệu suất của fixed position elements */
+    .to-top-button,
+    .fixed-bottom {
+        -webkit-transform: translateZ(0);
+    }
+}
+
+/* Đảm bảo văn bản rõ ràng trên Safari */
+* {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ngăn chặn lỗi "overscroll" trên Safari */
+html {
+    height: 100%;
+    overflow: auto;
+    position: relative;
+}
+
+/* Đảm bảo UI mượt mà */
+input, 
+button, 
+textarea, 
+select {
+    font-family: inherit;
+    font-size: inherit;
 }
 
 /* Style for component cards in the selected list */
