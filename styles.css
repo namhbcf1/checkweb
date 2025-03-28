@@ -843,6 +843,7 @@ footer p {
     --border-radius: 8px;
     --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     --transition: all 0.3s ease;
+    --hover-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
 }
 
 body {
@@ -861,6 +862,25 @@ body {
     max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
+    display: flex;
+}
+
+
+.main-content-split {
+    display: flex;
+    gap: 20px;
+    flex: 1;
+}
+
+.main-content-primary {
+    width: 75%;
+}
+
+
+.main-content-sidebar {
+    width: 25%;
+    position: sticky;
+    top: 80px;
 }
 
 /* Header Styles */
@@ -974,7 +994,8 @@ header {
     top: 30px;
     left: 0;
     right: 0;
-    height: 3px;background-color: var(--light-gray);
+    height: 3px;
+    background-color: var(--light-gray);
     z-index: -1;
 }
 
@@ -2570,18 +2591,18 @@ footer {
     .chart-container {
         height: 250px;
     }
-    
+
     /* Cải thiện hiển thị trên mobile */
     .build-progress .step-icon {
         width: 40px;
         height: 40px;
         font-size: 1.2rem;
     }
-    
+
     .progress-step .step-label {
         font-size: 0.7rem;
     }
-    
+
     .section-header h2 {
         font-size: 1.3rem;
     }
@@ -2730,4 +2751,116 @@ header .phone-number i {
     0% { transform: scale(1); }
     50% { transform: scale(1.2); }
     100% { transform: scale(1); }
+}
+
+/* Sidebar styling */
+.sidebar-section {
+    background-color: white;
+    border-radius: var(--border-radius);
+    padding: 18px;
+    margin-bottom: 20px;
+    box-shadow: var(--box-shadow);
+    border-top: 3px solid var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+.sidebar-section:hover {
+    box-shadow: var(--hover-shadow);
+}
+
+.sidebar-section .section-header {
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--light-gray);
+    padding-bottom: 8px;
+}
+
+.sidebar-section .section-header h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.sidebar-section .suggestion-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sidebar-section .suggestion-card {
+    padding: 12px;
+    background-color: var(--light-color);
+    border-radius: var(--border-radius);
+    border-left: 3px solid var(--primary-color);
+}
+
+.sidebar-section .expert-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.sidebar-section .expert-tip i {
+    font-size: 1.2rem;
+    color: var(--primary-color);
+    padding-top: 3px;
+}
+
+.sidebar-section .tip-content h4 {
+    font-size: 1rem;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.sidebar-section .tip-content p {
+    font-size: 0.9rem;
+    color: var(--gray-color);
+    margin: 0;
+}
+
+@media (max-width: 1024px) {
+    .main-content-split {
+        flex-direction: column;
+    }
+
+    .main-content-sidebar {
+        width: 100%;
+        position: static;
+    }
+}
+
+@media (max-width: 768px) {
+    .selection-grid,
+    .additional-components-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .component-card {
+        width: 100%;
+    }
+
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+    }
+
+    .chart-container {
+        height: 250px;
+    }
+
+    .main-content-primary,
+    .main-content-sidebar {
+        width: 100%;
+    }
+
+    .feature-card i, 
+    .payment-method i {
+        font-size: 1.3rem;
+    }
+
+    .feature-card h3 {
+        font-size: 1rem;
+    }
+
+    .feature-card p {
+        font-size: 0.9rem;
+    }
 }
