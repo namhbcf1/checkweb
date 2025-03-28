@@ -19,7 +19,7 @@
             window.exports = {};
             window.module = { exports: window.exports };
         }
-        
+
         // Fix for 'require is not defined' error
         if (typeof require === 'undefined') {
             window.require = function(module) {
@@ -27,7 +27,7 @@
                 return {};
             };
         }
-        
+
         // Fix for "process is not defined" error
         if (typeof process === 'undefined') {
             window.process = {
@@ -36,19 +36,19 @@
                 versions: { node: false }
             };
         }
-        
+
         // Fix for potential infinite recursion in getWindow/getComputedStyle
         const originalGetComputedStyle = window.getComputedStyle;
         const computedStyleCache = new WeakMap();
-        
+
         window.getComputedStyle = function(element, pseudoElt) {
             if (!element) return null;
-            
+
             // Return cached result if available
             if (computedStyleCache.has(element)) {
                 return computedStyleCache.get(element);
             }
-            
+
             try {
                 // Handle special element types that might cause recursion
                 if (element instanceof HTMLCanvasElement || 
@@ -62,7 +62,7 @@
                     computedStyleCache.set(element, defaultStyle);
                     return defaultStyle;
                 }
-                
+
                 const result = originalGetComputedStyle.call(window, element, pseudoElt);
                 computedStyleCache.set(element, result);
                 return result;
@@ -71,7 +71,7 @@
                 return originalGetComputedStyle.call(window, document.body); // Fallback
             }
         };
-        
+
         // Fix for read-only window properties
         const windowProxy = new Proxy(window, {
             set(target, prop, value) {
@@ -94,7 +94,7 @@
                 return true;
             }
         });
-        
+
         // Apply the proxy
         try {
             if (typeof globalThis !== 'undefined') {
@@ -300,7 +300,7 @@
                     <option value="mu-origin">MU Origin</option>
                     <option value="crossfire">CrossFire</option>
                 </select>
-                
+
                 <div class="auto-select-container" style="margin-top: 20px; text-align: center;">
                     <button id="manual-auto-select" class="action-button primary-btn" style="display: inline-block; padding: 10px 20px;">
                         <i class="fas fa-magic"></i> Tự Động Chọn Cấu Hình
@@ -490,7 +490,7 @@
                                                             <div id="game-performance" class="progress-bar" role="progressbar" style="width: 0%"></div>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     <div class="performance-metric">
                                                         <div class="metric-header">
                                                             <i class="fas fa-photo-video"></i>
@@ -500,7 +500,7 @@
                                                             <div id="graphic-performance" class="progress-bar" role="progressbar" style="width: 0%"></div>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     <div class="performance-metric">
                                                         <div class="metric-header">
                                                             <i class="fas fa-file-word"></i>
@@ -530,7 +530,7 @@
                                                             <div id="render-performance" class="progress-bar" role="progressbar" style="width: 0%"></div>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     <div class="bottleneck-indicator">
                                                         <div class="bottleneck-title"><i class="fas fa-balance-scale"></i> Cân bằng CPU/GPU</div>
                                                         <div class="balance-labels">
@@ -544,7 +544,7 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                            
+
                                             <div class="col-md-6">
                                                 <div id="game-performance-details" class="game-performance-details">
                                                     <!-- Game performance details will be inserted here -->
@@ -555,7 +555,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="col-md-6">
                             <div class="chart-container">
                                 <h4 class="section-title"><i class="fas fa-chart-radar"></i> Phân tích hiệu năng tổng thể</h4>
@@ -597,7 +597,7 @@
                     </div>
                 </div>
             </section>
-            
+
             <section id="selected-components">
                 <div class="section-header">
                     <i class="fas fa-list-check"></i>
@@ -650,7 +650,7 @@
                     <i class="fas fa-save"></i> Lưu cấu hình
                 </button>
             </div>
-            
+
             <div class="config-table fixed-bottom">
                 <table>
                     <thead>
@@ -677,8 +677,7 @@
                             <td id="vga-score">...</td>
                         </tr>
                         <tr>
-                            <td>SSD</td>
-                            <td id="ssd-name">...</td>
+                            <td>SSD</td><td id="ssd-name">...</td>
                             <td id="ssd-score">...</td>
                         </tr>
                         <tr>
@@ -768,7 +767,7 @@
                 // Đảm bảo các dropdowns được khởi tạo
                 const cpuDropdown = document.getElementById('cpu');
                 const vgaDropdown = document.getElementById('vga');
-                
+
                 if (cpuDropdown && !cpuDropdown.options.length) {
                     // Thêm một số CPU tạm thời
                     const cpus = [
@@ -776,7 +775,7 @@
                         {value: 'i7-12700k', text: 'Intel Core i7-12700K'},
                         {value: 'ryzen-5-5600x', text: 'AMD Ryzen 5 5600X'}
                     ];
-                    
+
                     cpus.forEach(cpu => {
                         const option = document.createElement('option');
                         option.value = cpu.value;
@@ -784,7 +783,7 @@
                         cpuDropdown.appendChild(option);
                     });
                 }
-                
+
                 if (vgaDropdown && !vgaDropdown.options.length) {
                     // Thêm một số GPU tạm thời
                     const gpus = [
@@ -792,7 +791,7 @@
                         {value: 'rtx-3070', text: 'NVIDIA RTX 3070'},
                         {value: 'rx-6700xt', text: 'AMD RX 6700 XT'}
                     ];
-                    
+
                     gpus.forEach(gpu => {
                         const option = document.createElement('option');
                         option.value = gpu.value;
@@ -800,7 +799,7 @@
                         vgaDropdown.appendChild(option);
                     });
                 }
-                
+
                 console.log('Dropdowns populated successfully');
             } catch (error) {
                 console.error('Error in populateDropdowns:', error);
@@ -899,31 +898,31 @@
             const intelOption = document.getElementById('intel-option');
             const amdOption = document.getElementById('amd-option');
             const cpuTypeDropdown = document.getElementById('cpu-type');
-            
+
             // Đặt giá trị mặc định là Intel
             if (cpuTypeDropdown) {
                 cpuTypeDropdown.value = 'Intel';
                 intelOption.classList.add('selected');
             }
-            
+
             intelOption.addEventListener('click', function() {
                 intelOption.classList.add('selected');
                 amdOption.classList.remove('selected');
                 cpuTypeDropdown.value = 'Intel';
                 cpuTypeDropdown.dispatchEvent(new Event('change'));
             });
-            
+
             amdOption.addEventListener('click', function() {
                 amdOption.classList.add('selected');
                 intelOption.classList.remove('selected');
                 cpuTypeDropdown.value = 'Amd';
                 cpuTypeDropdown.dispatchEvent(new Event('change'));
             });
-            
+
             // Xử lý cho các card game
             const gameCards = document.querySelectorAll('.game-card');
             const gameGenreDropdown = document.getElementById('game-genre');
-            
+
             gameCards.forEach(card => {
                 card.addEventListener('click', function() {
                     // Bỏ chọn tất cả các card
@@ -933,16 +932,16 @@
                     // Cập nhật dropdown và kích hoạt sự kiện change
                     gameGenreDropdown.value = this.dataset.game;
                     console.log('Game card clicked:', this.dataset.game);
-                    
+
                     // Dispatch the change event properly to trigger autoSelectConfig
                     const changeEvent = new Event('change', { bubbles: true });
                     gameGenreDropdown.dispatchEvent(changeEvent);
                 });
             });
-            
+
             // Xử lý cho nút scroll to top
             const toTopButton = document.getElementById('to-top-button');
-            
+
             window.addEventListener('scroll', function() {
                 if (window.pageYOffset > 300) {
                     toTopButton.classList.add('show');
@@ -950,14 +949,14 @@
                     toTopButton.classList.remove('show');
                 }
             });
-            
+
             toTopButton.addEventListener('click', function() {
                 window.scrollTo({
                     top: 0,
                     behavior: 'smooth'
                 });
             });
-            
+
             // Khởi tạo tooltips cho các thành phần
             try {
                 if (typeof tippy !== 'undefined') {
@@ -978,7 +977,7 @@
             } catch (e) {
                 console.log('Tippy initialization error:', e);
             }
-            
+
             // Nút close alert
             const closeAlert = document.getElementById('close-alert');
             if (closeAlert) {
@@ -986,7 +985,7 @@
                     document.getElementById('compatibility-alert').classList.add('hidden');
                 });
             }
-            
+
             // Xử lý nút reset
             const resetButton = document.getElementById('reset-button');
             if (resetButton) {
@@ -996,7 +995,7 @@
                     }
                 });
             }
-            
+
             // Khởi tạo biểu đồ hiệu năng
             const ctx = document.getElementById('performance-chart');
             if (ctx) {
@@ -1068,7 +1067,7 @@
                     }
                 });
             }
-            
+
             // Khởi tạo trình xử lý sự kiện cho phần hiệu năng
             function initPerformanceHandlers() {
                 // Đảm bảo các thanh tiến trình có màu mặc định
@@ -1078,7 +1077,7 @@
                         bar.style.backgroundColor = '#ff9800';
                     }
                 });
-                
+
                 // Kiểm tra bottleneck indicator
                 const bottleneckIndicator = document.getElementById('bottleneck-indicator');
                 if (bottleneckIndicator && bottleneckIndicator.style.left === '') {
@@ -1086,39 +1085,39 @@
                     bottleneckIndicator.style.backgroundColor = '#4caf50';
                     bottleneckIndicator.style.border = '2px solid #2e7d32';
                 }
-                
+
                 // Kiểm tra bottleneck percentage
                 const bottleneckPercentage = document.getElementById('bottleneck-percentage');
                 if (bottleneckPercentage && bottleneckPercentage.textContent === 'Đang phân tích...') {
                     bottleneckPercentage.textContent = 'Cân bằng lý tưởng';
                 }
-                
+
                 console.log('Đã khởi tạo các trình xử lý cho phần hiệu năng');
             }
-            
+
             // Gọi hàm khởi tạo
             initPerformanceHandlers();
-            
+
             // Mặc định chọn Intel
             intelOption.click();
-            
+
             // Manual auto-select button
             const manualAutoSelectBtn = document.getElementById('manual-auto-select');
             if (manualAutoSelectBtn) {
                 manualAutoSelectBtn.addEventListener('click', function() {
                     console.log('Manual auto-select button clicked');
-                    
+
                     // Dispatch change events to ensure everything is up to date
                     const gameGenreDropdown = document.getElementById('game-genre');
                     const budgetRange = document.getElementById('budget-range');
                     const cpuTypeDropdown = document.getElementById('cpu-type');
-                    
+
                     if (gameGenreDropdown && budgetRange && cpuTypeDropdown) {
                         console.log('Current selections:');
                         console.log('Game:', gameGenreDropdown.value);
                         console.log('Budget:', budgetRange.value);
                         console.log('CPU Type:', cpuTypeDropdown.value);
-                        
+
                         // Manually trigger the autoSelectConfig function through the module
                         const event = new Event('manual-auto-select');
                         document.dispatchEvent(event);
@@ -1127,42 +1126,42 @@
                     }
                 });
             }
-            
+
             // Khởi tạo CPU và GPU mặc định để kích hoạt hiệu năng
             try {
                 // Đặt giá trị mặc định cho dropdowns
                 const cpuDropdown = document.getElementById('cpu-dropdown');
                 const gpuDropdown = document.getElementById('gpu-dropdown');
-                
+
                 if (cpuDropdown && !cpuDropdown.value) {
                     cpuDropdown.value = 'i5-12400';
                 }
-                
+
                 if (gpuDropdown && !gpuDropdown.value) {
                     gpuDropdown.value = 'RTX 3060';
                 }
-                
+
                 // Đảm bảo rằng hàm đánh giá hiệu năng được gọi ban đầu
                 if (typeof updateAllPerformanceMetrics === 'function') {
                     console.log('Gọi đánh giá hiệu năng lần đầu...');
                     setTimeout(updateAllPerformanceMetrics, 500);
-                    
+
                     // Thêm event listeners để cập nhật hiệu năng khi CPU hoặc GPU thay đổi
                     if (cpuDropdown) {
                         cpuDropdown.addEventListener('change', updateAllPerformanceMetrics);
                     }
-                    
+
                     if (gpuDropdown) {
                         gpuDropdown.addEventListener('change', updateAllPerformanceMetrics);
                     }
-                    
+
                     // Nút cập nhật thủ công
                     const updateButton = document.createElement('button');
                     updateButton.textContent = 'Cập nhật hiệu năng';
                     updateButton.className = 'btn btn-primary update-performance-btn';
                     updateButton.style.margin = '10px 0';
                     updateButton.addEventListener('click', updateAllPerformanceMetrics);
-                    
+
                     const performanceSection = document.querySelector('.performance-section');
                     if (performanceSection) {
                         performanceSection.prepend(updateButton);
@@ -1185,14 +1184,14 @@
                 if (score >= 30) return '#e67e22'; // Fair - Orange
                 return '#e74c3c'; // Poor - Red
             };
-            
+
             // Định nghĩa lại hàm getScoreColor để tránh lỗi trùng lặp
             Object.defineProperty(window, 'getScoreColor', {
                 value: window.getScoreColor,
                 writable: false,
                 configurable: false
             });
-            
+
             // Fix cho lỗi Cannot set property top of #<Window>
             const readOnlyProps = ['top', 'parent', 'self', 'window', 'frames', 'location'];
             readOnlyProps.forEach(prop => {
@@ -1200,7 +1199,7 @@
                     const descriptor = Object.getOwnPropertyDescriptor(window, prop);
                     if (descriptor && !descriptor.configurable) {
                         console.log(`Property ${prop} is read-only, applying fix`);
-                        
+
                         // Tạo proxy để bắt tất cả attempts để set thuộc tính
                         const originalValue = window[prop];
                         Object.defineProperty(window, prop + '_safe', {
@@ -1213,14 +1212,14 @@
                     console.warn(`Error setting up fix for property ${prop}:`, e);
                 }
             });
-            
+
             // Fix cho call stack size exceeded
             if (typeof window.getComputedStyle !== 'function' || window._originalGetComputedStyle) return;
-            
+
             window._originalGetComputedStyle = window.getComputedStyle;
             window.getComputedStyle = function(element, pseudoElt) {
                 if (!element) return {};
-                
+
                 try {
                     // Avoid recursion for problematic elements
                     if (element instanceof HTMLCanvasElement) {
@@ -1228,7 +1227,7 @@
                             getPropertyValue: function() { return ''; }
                         };
                     }
-                    
+
                     return window._originalGetComputedStyle(element, pseudoElt);
                 } catch (e) {
                     console.error('Error in getComputedStyle override:', e);
