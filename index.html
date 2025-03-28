@@ -17,23 +17,19 @@
     <script>
         // Safari iOS compatibility layer
         (function() {
-            // Safari iOS detection - cải thiện độ chính xác
-            const isSafariIOS = (function() {
-                const ua = window.navigator.userAgent;
-                const iOS = !!ua.match(/iPad/i) || !!ua.match(/iPhone/i) || !!ua.match(/iPod/i);
-                const webkit = !!ua.match(/WebKit/i);
-                const iOSSafari = iOS && webkit && !ua.match(/CriOS/i) && !ua.match(/FxiOS/i) && !ua.match(/OPiOS/i);
-                return iOSSafari;
-            })();
-
+            // Safari iOS detection
+            const isSafariIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) && 
+                                /WebKit/i.test(navigator.userAgent) && 
+                                !/CriOS|FxiOS|OPiOS|mercury/i.test(navigator.userAgent);
+            
             console.log("Safari iOS detection:", isSafariIOS);
-
+            
             // Fix for "exports is not defined" errors
             if (typeof exports === 'undefined') {
                 window.exports = {};
                 window.module = { exports: window.exports };
             }
-
+            
             // Fix for 'require is not defined' error
             if (typeof require === 'undefined') {
                 window.require = function(module) {
@@ -52,7 +48,7 @@
                     return {};
                 };
             }
-
+            
             // Fix for "process is not defined" error
             if (typeof process === 'undefined') {
                 window.process = {
@@ -61,275 +57,135 @@
                     versions: { node: false }
                 };
             }
-
-            // Ngăn chặn lỗi tràn bộ nhớ đệm trong Safari - sửa đổi quan trọng
+            
+            // Prevent Safari from infinite recursion issues
             if (!window._getComputedStylePatched) {
                 try {
-                    const originalGetComputedStyle = window.getComputedStyle;
-
-                    // Cache kết quả để tránh vòng lặp vô hạn
-                    const styleCache = new WeakMap();
-
+                    // Safe original method storage
+                    window._originalGetComputedStyle = window.getComputedStyle;
+                    
+                    // Create a simplified version that avoids recursion
                     window.getComputedStyle = function(element, pseudoElt) {
                         if (!element) {
+                            return { getPropertyValue: function() { return ''; } };
+                        }
+                        
+                        try {
+                            // For problematic elements, return a safe style object
+                            if (!element.tagName || 
+                                element instanceof HTMLCanvasElement || 
+                                element instanceof HTMLImageElement ||
+                                element instanceof SVGElement) {
+                                
+                                return { 
+                                    getPropertyValue: function() { return ''; },
+                                    cssText: '',
+                                    length: 0,
+                                    item: function() { return null; }
+                                };
+                            }
+                            
+                            return window._originalGetComputedStyle(element, pseudoElt);
+                        } catch (e) {
+                            console.warn('Safe getComputedStyle error:', e.message);
                             return { 
                                 getPropertyValue: function() { return ''; },
                                 cssText: '',
                                 length: 0
                             };
                         }
-
-                        // Trả về từ cache nếu có
-                        if (styleCache.has(element)) {
-                            return styleCache.get(element);
-                        }
-
-                        try {
-                            // Xử lý đặc biệt cho các phần tử có vấn đề
-                            if (!element.tagName || 
-                                (element instanceof HTMLCanvasElement) || 
-                                (element instanceof HTMLImageElement) ||
-                                (element instanceof SVGElement)) {
-
-                                const safeStyle = { 
-                                    getPropertyValue: function() { return ''; },
-                                    cssText: '',
-                                    length: 0,
-                                    item: function() { return null; }
-                                };
-
-                                styleCache.set(element, safeStyle);
-                                return safeStyle;
-                            }
-
-                            // Lấy giá trị thật từ phương thức gốc
-                            const style = originalGetComputedStyle.call(window, element, pseudoElt);
-
-                            // Cache kết quả
-                            styleCache.set(element, style);
-                            return style;
-                        } catch (e) {
-                            console.warn('Lỗi getComputedStyle an toàn:', e.message);
-
-                            const safeStyle = { 
-                                getPropertyValue: function() { return ''; },
-                                cssText: '',
-                                length: 0
-                            };
-
-                            styleCache.set(element, safeStyle);
-                            return safeStyle;
-                        }
                     };
-
+                    
                     window._getComputedStylePatched = true;
                 } catch (e) {
-                    console.error('Không thể áp dụng patch cho getComputedStyle:', e);
+                    console.error('Failed to patch getComputedStyle:', e);
                 }
             }
-
-            // Sửa lỗi sự kiện chạm trên Safari iOS
+            
+            // Fix for Safari iOS touch events
             try {
-                // Làm cho sự kiện chạm luôn non-passive để có thể gọi preventDefault()
+                // Make touchstart/touchmove events non-passive by default
                 if (!window._touchEventsPatched) {
                     const originalAddEventListener = EventTarget.prototype.addEventListener;
-
+                    
                     EventTarget.prototype.addEventListener = function(type, listener, options) {
                         let safeOptions = options;
-
-                        // Đảm bảo sự kiện chạm không bị giới hạn bởi passive
-                        if (type === 'touchstart' || type === 'touchmove' || type === 'touchend') {
+                        
+                        // Make touch events non-passive by default
+                        if (type === 'touchstart' || type === 'touchmove') {
                             if (options === undefined || options === null) {
                                 safeOptions = { passive: false };
                             } else if (typeof options === 'object' && options.passive === undefined) {
                                 safeOptions = Object.assign({}, options, { passive: false });
                             }
                         }
-
+                        
                         return originalAddEventListener.call(this, type, listener, safeOptions);
                     };
-
+                    
                     window._touchEventsPatched = true;
-                    console.log("Touch events patched successfully");
                 }
             } catch (e) {
-                console.error('Không thể áp dụng patch cho sự kiện chạm:', e);
+                console.error('Failed to patch touch events:', e);
             }
-
-            // Sửa đổi cho iOS Safari
+            
+            // Prevent touch delay on iOS Safari
             if (isSafariIOS) {
                 document.addEventListener('DOMContentLoaded', function() {
-                    console.log("Applying iOS specific fixes");
-
-                    // Ngăn chặn zoom khi nhấp đúp
+                    // Prevent zoom on double tap
                     let lastTouchEnd = 0;
-                    document.addEventListener('touchend', function(e) {
+                    document.documentElement.addEventListener('touchend', function(e) {
                         const now = Date.now();
                         if (now - lastTouchEnd < 300) {
                             e.preventDefault();
                         }
                         lastTouchEnd = now;
                     }, { passive: false });
-
-                    // Vô hiệu hóa hiệu ứng khi chạm và tối ưu hóa hiệu suất
+                    
+                    // Disable user select and callout on elements
                     const style = document.createElement('style');
                     style.innerHTML = `
-                        html, body {
-                            -webkit-overflow-scrolling: touch;
-                            overflow-x: hidden;
-                            width: 100%;
-                            position: relative;
-                            height: 100%;
-                            touch-action: manipulation;
-                            -webkit-text-size-adjust: 100%;
-                        }
-
                         body, .no-callout {
                             -webkit-touch-callout: none;
                             -webkit-user-select: none;
+                            -khtml-user-select: none;
+                            -moz-user-select: none;
+                            -ms-user-select: none;
                             user-select: none;
-                            -webkit-tap-highlight-color: transparent;
+                            -webkit-tap-highlight-color: rgba(0,0,0,0);
                         }
-
-                        button, .action-button, .contact-button, select, 
-                        .game-card, .brand-option, .close-modal, .close-alert,
-                        .component-header, .dropdown {
-                            min-height: 44px;
-                            min-width: 44px;
-                            touch-action: manipulation;
-                            -webkit-appearance: none;
-                            appearance: none;
-                        }
-
-                        input, textarea, select {
+                        
+                        input, textarea {
                             -webkit-user-select: auto;
                             user-select: auto;
-                            font-size: 16px; /* Ngăn chặn zoom trên iOS */
-                        }
-
-                        /* Sửa lỗi fixed position trên iOS */
-                        .modal {
-                            position: fixed;
-                            top: 0;
-                            left: 0;
-                            right: 0;
-                            bottom: 0;
-                            -webkit-overflow-scrolling: touch;
-                            transform: translateZ(0);
-                            z-index: 9999;
-                        }
-
-                        .modal-content {
-                            transform: translate3d(0,0,0);
-                            max-height: 80vh;
-                            overflow-y: auto;
-                            -webkit-overflow-scrolling: touch;
-                            border-radius: 12px;
-                            /* Thêm overflow clip cho iOS */
-                            overflow: hidden;
-                        }
-
-                        /* Tối ưu cho các phần tử tương tác */
-                        select.dropdown {
-                            padding: 12px 30px 12px 12px;
-                            background-position: right 12px center;
-                            font-size: 16px;
-                            background-size: 16px;
-                        }
-
-                        /* Fix game card trên iOS */
-                        .game-card {
-                            transform: translateZ(0);
-                            -webkit-backface-visibility: hidden;
-                            backface-visibility: hidden;
-                        }
-
-                        /* Cải thiện hiệu năng slider */
-                        .slider::-webkit-slider-thumb {
-                            -webkit-appearance: none;
-                            width: 28px;
-                            height: 28px;
-                            border-radius: 50%;
-                            background-color: #ff4757;
-                            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-                        }
-
-                        /* Sửa lỗi với thanh tác vụ on iOS */
-                        @supports (padding-top: env(safe-area-inset-top)) {
-                            .modal, header, footer, .fixed-bottom {
-                                padding-left: env(safe-area-inset-left);
-                                padding-right: env(safe-area-inset-right);
-                            }
-                            .modal-content {
-                                width: calc(100% - env(safe-area-inset-left) - env(safe-area-inset-right) - 20px);
-                            }
-                            header {
-                                padding-top: env(safe-area-inset-top);
-                            }
-                            footer, .fixed-bottom {
-                                padding-bottom: env(safe-area-inset-bottom);
-                            }
                         }
                     `;
                     document.head.appendChild(style);
-
-                    // Thay đổi hành vi modals (cần cho iOS)
-                    document.querySelectorAll('.modal').forEach(modal => {
-                        modal.addEventListener('touchmove', function(e) {
-                            e.stopPropagation();
-                        }, { passive: true });
-
-                        const modalContent = modal.querySelector('.modal-content');
-                        if (modalContent) {
-                            modalContent.addEventListener('touchmove', function(e) {
-                                e.stopPropagation(); // Cho phép cuộn trong modal
-                            }, { passive: true });
-                        }
-                    });
-
-                    // Tối ưu sự kiện chạm cho các menu dropdown
-                    document.querySelectorAll('select').forEach(select => {
-                        select.addEventListener('touchend', function(e) {
-                            // Tự động focus khi chạm
-                            this.focus();
-                        }, { passive: false });
-                    });
-
-                    // Tối ưu cho các nút bấm trên iOS
-                    document.querySelectorAll('button, .action-button, .game-card, .brand-option').forEach(el => {
-                        // Sử dụng GPU để render
+                    
+                    // Fix for potential CSS transform issues on iOS
+                    const allElements = document.querySelectorAll('.dropdown, .game-card, button, .component');
+                    allElements.forEach(el => {
                         el.style.willChange = 'transform';
                         el.style.transform = 'translateZ(0)';
-                        el.style.webkitBackfaceVisibility = 'hidden';
                         el.style.backfaceVisibility = 'hidden';
-
-                        // Thêm sự kiện touchend để khắc phục độ trễ 300ms
-                        if (el.className.includes('game-card') || el.className.includes('brand-option')) {
-                            el.addEventListener('touchend', function(e) {
-                                e.preventDefault();
-                                this.click(); // Kích hoạt sự kiện click
-                            }, { passive: false });
-                        }
                     });
-
-                    console.log("iOS specific fixes applied");
                 });
             }
-
-            // Safe polyfill cho các hàm thiếu
+            
+            // Safe polyfill for any missing browser functions
             if (!window.requestAnimationFrame) {
                 window.requestAnimationFrame = function(callback) {
                     return setTimeout(callback, 1000 / 60);
                 };
             }
-
+            
             if (!window.cancelAnimationFrame) {
                 window.cancelAnimationFrame = function(id) {
                     clearTimeout(id);
                 };
             }
-
-            // Fix cho các trình duyệt không hỗ trợ classList trên SVG
+            
+            // Fix for older browsers that don't support classList on SVG elements
             if (!('classList' in SVGElement.prototype)) {
                 Object.defineProperty(SVGElement.prototype, 'classList', {
                     get: function() {
@@ -343,17 +199,6 @@
                         };
                     }
                 });
-            }
-
-            // Khắc phục lỗi window.top
-            try {
-                const topDescriptor = Object.getOwnPropertyDescriptor(window, 'top');
-                if (topDescriptor && !topDescriptor.configurable) {
-                    console.log("Property top is read-only, applying fix");
-                    window.safeTop = window.top;
-                }
-            } catch (e) {
-                console.warn("Cannot access 'top' property descriptor");
             }
         })();
     </script>
@@ -563,7 +408,7 @@
                     <option value="mu-origin">MU Origin</option>
                     <option value="crossfire">CrossFire</option>
                 </select>
-
+                
                 <div class="auto-select-container" style="margin-top: 20px; text-align: center;">
                     <button id="manual-auto-select" class="action-button primary-btn" style="display: inline-block; padding: 10px 20px;">
                         <i class="fas fa-magic"></i> Tự Động Chọn Cấu Hình
@@ -753,7 +598,7 @@
                                                             <div id="game-performance" class="progress-bar" role="progressbar" style="width: 0%"></div>
                                                         </div>
                                                     </div>
-
+                                                    
                                                     <div class="performance-metric">
                                                         <div class="metric-header">
                                                             <i class="fas fa-photo-video"></i>
@@ -763,7 +608,7 @@
                                                             <div id="graphic-performance" class="progress-bar" role="progressbar" style="width: 0%"></div>
                                                         </div>
                                                     </div>
-
+                                                    
                                                     <div class="performance-metric">
                                                         <div class="metric-header">
                                                             <i class="fas fa-file-word"></i>
@@ -793,7 +638,7 @@
                                                             <div id="render-performance" class="progress-bar" role="progressbar" style="width: 0%"></div>
                                                         </div>
                                                     </div>
-
+                                                    
                                                     <div class="bottleneck-indicator">
                                                         <div class="bottleneck-title"><i class="fas fa-balance-scale"></i> Cân bằng CPU/GPU</div>
                                                         <div class="balance-labels">
@@ -807,7 +652,7 @@
                                                     </div>
                                                 </div>
                                             </div>
-
+                                            
                                             <div class="col-md-6">
                                                 <div id="game-performance-details" class="game-performance-details">
                                                     <!-- Game performance details will be inserted here -->
@@ -818,7 +663,7 @@
                                 </div>
                             </div>
                         </div>
-
+                        
                         <div class="col-md-6">
                             <div class="chart-container">
                                 <h4 class="section-title"><i class="fas fa-chart-radar"></i> Phân tích hiệu năng tổng thể</h4>
@@ -860,7 +705,7 @@
                     </div>
                 </div>
             </section>
-
+            
             <section id="selected-components">
                 <div class="section-header">
                     <i class="fas fa-list-check"></i>
@@ -913,7 +758,7 @@
                     <i class="fas fa-save"></i> Lưu cấu hình
                 </button>
             </div>
-
+            
             <div class="config-table fixed-bottom">
                 <table>
                     <thead>
@@ -1031,7 +876,7 @@
                 // Đảm bảo các dropdowns được khởi tạo
                 const cpuDropdown = document.getElementById('cpu');
                 const vgaDropdown = document.getElementById('vga');
-
+                
                 if (cpuDropdown && !cpuDropdown.options.length) {
                     // Thêm một số CPU tạm thời
                     const cpus = [
@@ -1039,7 +884,7 @@
                         {value: 'i7-12700k', text: 'Intel Core i7-12700K'},
                         {value: 'ryzen-5-5600x', text: 'AMD Ryzen 5 5600X'}
                     ];
-
+                    
                     cpus.forEach(cpu => {
                         const option = document.createElement('option');
                         option.value = cpu.value;
@@ -1047,7 +892,7 @@
                         cpuDropdown.appendChild(option);
                     });
                 }
-
+                
                 if (vgaDropdown && !vgaDropdown.options.length) {
                     // Thêm một số GPU tạm thời
                     const gpus = [
@@ -1055,7 +900,7 @@
                         {value: 'rtx-3070', text: 'NVIDIA RTX 3070'},
                         {value: 'rx-6700xt', text: 'AMD RX 6700 XT'}
                     ];
-
+                    
                     gpus.forEach(gpu => {
                         const option = document.createElement('option');
                         option.value = gpu.value;
@@ -1063,7 +908,7 @@
                         vgaDropdown.appendChild(option);
                     });
                 }
-
+                
                 console.log('Dropdowns populated successfully');
             } catch (error) {
                 console.error('Error in populateDropdowns:', error);
@@ -1162,31 +1007,31 @@
             const intelOption = document.getElementById('intel-option');
             const amdOption = document.getElementById('amd-option');
             const cpuTypeDropdown = document.getElementById('cpu-type');
-
+            
             // Đặt giá trị mặc định là Intel
             if (cpuTypeDropdown) {
                 cpuTypeDropdown.value = 'Intel';
                 intelOption.classList.add('selected');
             }
-
+            
             intelOption.addEventListener('click', function() {
                 intelOption.classList.add('selected');
                 amdOption.classList.remove('selected');
                 cpuTypeDropdown.value = 'Intel';
                 cpuTypeDropdown.dispatchEvent(new Event('change'));
             });
-
+            
             amdOption.addEventListener('click', function() {
                 amdOption.classList.add('selected');
                 intelOption.classList.remove('selected');
                 cpuTypeDropdown.value = 'Amd';
                 cpuTypeDropdown.dispatchEvent(new Event('change'));
             });
-
+            
             // Xử lý cho các card game
             const gameCards = document.querySelectorAll('.game-card');
             const gameGenreDropdown = document.getElementById('game-genre');
-
+            
             gameCards.forEach(card => {
                 card.addEventListener('click', function() {
                     // Bỏ chọn tất cả các card
@@ -1196,16 +1041,16 @@
                     // Cập nhật dropdown và kích hoạt sự kiện change
                     gameGenreDropdown.value = this.dataset.game;
                     console.log('Game card clicked:', this.dataset.game);
-
+                    
                     // Dispatch the change event properly to trigger autoSelectConfig
                     const changeEvent = new Event('change', { bubbles: true });
                     gameGenreDropdown.dispatchEvent(changeEvent);
                 });
             });
-
+            
             // Xử lý cho nút scroll to top
             const toTopButton = document.getElementById('to-top-button');
-
+            
             window.addEventListener('scroll', function() {
                 if (window.pageYOffset > 300) {
                     toTopButton.classList.add('show');
@@ -1213,14 +1058,14 @@
                     toTopButton.classList.remove('show');
                 }
             });
-
+            
             toTopButton.addEventListener('click', function() {
                 window.scrollTo({
                     top: 0,
                     behavior: 'smooth'
                 });
             });
-
+            
             // Khởi tạo tooltips cho các thành phần
             try {
                 if (typeof tippy !== 'undefined') {
@@ -1241,7 +1086,7 @@
             } catch (e) {
                 console.log('Tippy initialization error:', e);
             }
-
+            
             // Nút close alert
             const closeAlert = document.getElementById('close-alert');
             if (closeAlert) {
@@ -1249,7 +1094,7 @@
                     document.getElementById('compatibility-alert').classList.add('hidden');
                 });
             }
-
+            
             // Xử lý nút reset
             const resetButton = document.getElementById('reset-button');
             if (resetButton) {
@@ -1259,7 +1104,7 @@
                     }
                 });
             }
-
+            
             // Khởi tạo biểu đồ hiệu năng
             const ctx = document.getElementById('performance-chart');
             if (ctx) {
@@ -1331,7 +1176,7 @@
                     }
                 });
             }
-
+            
             // Khởi tạo trình xử lý sự kiện cho phần hiệu năng
             function initPerformanceHandlers() {
                 // Đảm bảo các thanh tiến trình có màu mặc định
@@ -1341,7 +1186,7 @@
                         bar.style.backgroundColor = '#ff9800';
                     }
                 });
-
+                
                 // Kiểm tra bottleneck indicator
                 const bottleneckIndicator = document.getElementById('bottleneck-indicator');
                 if (bottleneckIndicator && bottleneckIndicator.style.left === '') {
@@ -1349,39 +1194,39 @@
                     bottleneckIndicator.style.backgroundColor = '#4caf50';
                     bottleneckIndicator.style.border = '2px solid #2e7d32';
                 }
-
+                
                 // Kiểm tra bottleneck percentage
                 const bottleneckPercentage = document.getElementById('bottleneck-percentage');
                 if (bottleneckPercentage && bottleneckPercentage.textContent === 'Đang phân tích...') {
                     bottleneckPercentage.textContent = 'Cân bằng lý tưởng';
                 }
-
+                
                 console.log('Đã khởi tạo các trình xử lý cho phần hiệu năng');
             }
-
+            
             // Gọi hàm khởi tạo
             initPerformanceHandlers();
-
+            
             // Mặc định chọn Intel
             intelOption.click();
-
+            
             // Manual auto-select button
             const manualAutoSelectBtn = document.getElementById('manual-auto-select');
             if (manualAutoSelectBtn) {
                 manualAutoSelectBtn.addEventListener('click', function() {
                     console.log('Manual auto-select button clicked');
-
+                    
                     // Dispatch change events to ensure everything is up to date
                     const gameGenreDropdown = document.getElementById('game-genre');
                     const budgetRange = document.getElementById('budget-range');
                     const cpuTypeDropdown = document.getElementById('cpu-type');
-
+                    
                     if (gameGenreDropdown && budgetRange && cpuTypeDropdown) {
                         console.log('Current selections:');
                         console.log('Game:', gameGenreDropdown.value);
                         console.log('Budget:', budgetRange.value);
                         console.log('CPU Type:', cpuTypeDropdown.value);
-
+                        
                         // Manually trigger the autoSelectConfig function through the module
                         const event = new Event('manual-auto-select');
                         document.dispatchEvent(event);
@@ -1390,42 +1235,42 @@
                     }
                 });
             }
-
+            
             // Khởi tạo CPU và GPU mặc định để kích hoạt hiệu năng
             try {
                 // Đặt giá trị mặc định cho dropdowns
                 const cpuDropdown = document.getElementById('cpu-dropdown');
                 const gpuDropdown = document.getElementById('gpu-dropdown');
-
+                
                 if (cpuDropdown && !cpuDropdown.value) {
                     cpuDropdown.value = 'i5-12400';
                 }
-
+                
                 if (gpuDropdown && !gpuDropdown.value) {
                     gpuDropdown.value = 'RTX 3060';
                 }
-
+                
                 // Đảm bảo rằng hàm đánh giá hiệu năng được gọi ban đầu
                 if (typeof updateAllPerformanceMetrics === 'function') {
                     console.log('Gọi đánh giá hiệu năng lần đầu...');
                     setTimeout(updateAllPerformanceMetrics, 500);
-
+                    
                     // Thêm event listeners để cập nhật hiệu năng khi CPU hoặc GPU thay đổi
                     if (cpuDropdown) {
                         cpuDropdown.addEventListener('change', updateAllPerformanceMetrics);
                     }
-
+                    
                     if (gpuDropdown) {
                         gpuDropdown.addEventListener('change', updateAllPerformanceMetrics);
                     }
-
+                    
                     // Nút cập nhật thủ công
                     const updateButton = document.createElement('button');
                     updateButton.textContent = 'Cập nhật hiệu năng';
                     updateButton.className = 'btn btn-primary update-performance-btn';
                     updateButton.style.margin = '10px 0';
                     updateButton.addEventListener('click', updateAllPerformanceMetrics);
-
+                    
                     const performanceSection = document.querySelector('.performance-section');
                     if (performanceSection) {
                         performanceSection.prepend(updateButton);
@@ -1448,14 +1293,14 @@
                 if (score >= 30) return '#e67e22'; // Fair - Orange
                 return '#e74c3c'; // Poor - Red
             };
-
+            
             // Định nghĩa lại hàm getScoreColor để tránh lỗi trùng lặp
             Object.defineProperty(window, 'getScoreColor', {
                 value: window.getScoreColor,
                 writable: false,
                 configurable: false
             });
-
+            
             // Fix cho lỗi Cannot set property top of #<Window>
             const readOnlyProps = ['top', 'parent', 'self', 'window', 'frames', 'location'];
             readOnlyProps.forEach(prop => {
@@ -1463,7 +1308,7 @@
                     const descriptor = Object.getOwnPropertyDescriptor(window, prop);
                     if (descriptor && !descriptor.configurable) {
                         console.log(`Property ${prop} is read-only, applying fix`);
-
+                        
                         // Tạo proxy để bắt tất cả attempts để set thuộc tính
                         const originalValue = window[prop];
                         Object.defineProperty(window, prop + '_safe', {
@@ -1476,14 +1321,14 @@
                     console.warn(`Error setting up fix for property ${prop}:`, e);
                 }
             });
-
+            
             // Fix cho call stack size exceeded
             if (typeof window.getComputedStyle !== 'function' || window._originalGetComputedStyle) return;
-
+            
             window._originalGetComputedStyle = window.getComputedStyle;
             window.getComputedStyle = function(element, pseudoElt) {
                 if (!element) return {};
-
+                
                 try {
                     // Avoid recursion for problematic elements
                     if (element instanceof HTMLCanvasElement) {
@@ -1491,7 +1336,7 @@
                             getPropertyValue: function() { return ''; }
                         };
                     }
-
+                    
                     return window._originalGetComputedStyle(element, pseudoElt);
                 } catch (e) {
                     console.error('Error in getComputedStyle override:', e);
@@ -1500,52 +1345,23 @@
             };
         });
     </script>
-
+    
     <!-- Safari iOS Specific Enhancements -->
     <script>
-        // Detect Safari iOS - more comprehensive detection
-        const isSafariIOS = (function() {
-            const ua = navigator.userAgent;
-            const iOS = /iPhone|iPad|iPod/i.test(ua);
-            const webkit = /WebKit/i.test(ua);
-            const notChromeOrFirefox = !/CriOS|FxiOS|OPiOS|mercury/i.test(ua);
-
-            // Also detect iPads that identify as MacOS
-            const isMacWithTouch = /Macintosh/i.test(ua) && 'ontouchend' in document;
-
-            return (iOS && webkit && notChromeOrFirefox) || isMacWithTouch;
-        })();
-
+        // Detect Safari iOS
+        const isSafariIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) && 
+                           /WebKit/i.test(navigator.userAgent) && 
+                           !/CriOS|FxiOS|OPiOS|mercury/i.test(navigator.userAgent);
+                           
         if (isSafariIOS) {
             console.log("Safari iOS detected, applying optimizations");
-
-            // Add iOS class to html for additional CSS targeting
-            document.documentElement.classList.add('ios-device');
-
+            
             // Fix known Safari iOS issues
             document.addEventListener('DOMContentLoaded', function() {
                 // Fix modal issues
                 const modals = document.querySelectorAll('.modal');
                 const closeModalButtons = document.querySelectorAll('.close-modal');
-
-                // Complete rewrite of modal handling for iOS
-                modals.forEach(modal => {
-                    // Prevent scrolling behind modal
-                    modal.addEventListener('touchmove', function(e) {
-                        if (e.target === modal) {
-                            e.preventDefault();
-                        }
-                    }, { passive: false });
-
-                    // Allow scrolling inside modal content
-                    const modalContent = modal.querySelector('.modal-content');
-                    if (modalContent) {
-                        modalContent.addEventListener('touchmove', function(e) {
-                            e.stopPropagation();
-                        }, { passive: true });
-                    }
-                });
-
+                
                 closeModalButtons.forEach(button => {
                     button.addEventListener('touchend', function(e) {
                         e.preventDefault();
@@ -1553,53 +1369,83 @@
                         if (modal) {
                             modal.style.display = 'none';
                             document.body.classList.remove('modal-open');
-
-                            // Re-enable scrolling on body
-                            document.body.style.overflow = '';
-                            document.body.style.position = '';
-                            document.body.style.height = '';
                         }
                     });
                 });
-
-                // Override modal opening for iOS
-                const openModalButtons = document.querySelectorAll('[data-modal]');
-                openModalButtons.forEach(button => {
-                    button.addEventListener('touchend', function(e) {
+                
+                // Fix select dropdowns
+                const selectElements = document.querySelectorAll('select');
+                selectElements.forEach(select => {
+                    select.addEventListener('touchend', function(e) {
                         e.preventDefault();
-
-                        const modalId = this.getAttribute('data-modal');
-                        const modal = document.getElementById(modalId);
-
-                        if (modal) {
-                            // Disable background scrolling
-                            document.body.style.overflow = 'hidden';
-                            document.body.style.position = 'fixed';
-                            document.body.style.height = '100%';
-                            document.body.style.width = '100%';
-
-                            modal.style.display = 'flex';
-
-                            // Reset modal content scroll position
-                            const modalContent = modal.querySelector('.modal-content');
-                            if (modalContent) {
-                                modalContent.scrollTop = 0;
-                            }
+                        // Force focus and open the dropdown
+                        this.focus();
+                    });
+                });
+                
+                // Optimize game cards
+                const gameCards = document.querySelectorAll('.game-card');
+                gameCards.forEach(card => {
+                    // Use touchend instead of click for better responsiveness
+                    card.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        gameCards.forEach(c => c.classList.remove('selected'));
+                        this.classList.add('selected');
+                        
+                        const gameGenreDropdown = document.getElementById('game-genre');
+                        if (gameGenreDropdown) {
+                            gameGenreDropdown.value = this.dataset.game;
+                            const changeEvent = new Event('change', { bubbles: true });
+                            gameGenreDropdown.dispatchEvent(changeEvent);
                         }
                     });
                 });
-
+                
+                // Optimize CPU brand selection
+                const intelOption = document.getElementById('intel-option');
+                const amdOption = document.getElementById('amd-option');
+                
+                if (intelOption) {
+                    intelOption.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        intelOption.classList.add('selected');
+                        if (amdOption) amdOption.classList.remove('selected');
+                        
+                        const cpuTypeDropdown = document.getElementById('cpu-type');
+                        if (cpuTypeDropdown) {
+                            cpuTypeDropdown.value = 'Intel';
+                            const changeEvent = new Event('change', { bubbles: true });
+                            cpuTypeDropdown.dispatchEvent(changeEvent);
+                        }
+                    });
+                }
+                
+                if (amdOption) {
+                    amdOption.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        amdOption.classList.add('selected');
+                        if (intelOption) intelOption.classList.remove('selected');
+                        
+                        const cpuTypeDropdown = document.getElementById('cpu-type');
+                        if (cpuTypeDropdown) {
+                            cpuTypeDropdown.value = 'Amd';
+                            const changeEvent = new Event('change', { bubbles: true });
+                            cpuTypeDropdown.dispatchEvent(changeEvent);
+                        }
+                    });
+                }
+                
                 // Ensure all buttons are big enough for touch
                 const allButtons = document.querySelectorAll('button, .action-button, .contact-button');
                 allButtons.forEach(button => {
                     if (button.offsetHeight < 44) {
                         button.style.minHeight = '44px';
                     }
-                    ifif (button.offsetWidth < 44) {
+                    if (button.offsetWidth < 44) {
                         button.style.minWidth = '44px';
                     }
                 });
-
+                
                 // Ensure select elements have enough padding
                 const allSelects = document.querySelectorAll('select');
                 allSelects.forEach(select => {
@@ -1608,13 +1454,13 @@
                     select.style.paddingLeft = '12px';
                     select.style.fontSize = '16px'; // Prevent zoom on iOS
                 });
-
+                
                 // Fix potential issues with slider
                 const sliders = document.querySelectorAll('input[type="range"]');
                 sliders.forEach(slider => {
                     slider.style.webkitAppearance = 'none';
                     slider.style.height = '10px';
-
+                    
                     // Better thumb for iOS
                     const style = document.createElement('style');
                     style.textContent = `
@@ -1630,7 +1476,7 @@
                     document.head.appendChild(style);
                 });
             });
-
+            
             // Fix any chart rendering issues for iOS
             if (typeof Chart !== 'undefined') {
                 const originalAcquireContext = Chart.helpers.acquireContext;
@@ -1639,7 +1485,7 @@
                     const backingStoreRatio = context.webkitBackingStorePixelRatio || 1;
                     const devicePixelRatio = window.devicePixelRatio || 1;
                     const ratio = devicePixelRatio / backingStoreRatio;
-
+                    
                     if (ratio > 1) {
                         canvas.style.width = canvas.width + 'px';
                         canvas.style.height = canvas.height + 'px';
@@ -1647,24 +1493,24 @@
                         canvas.height *= ratio;
                         context.scale(ratio, ratio);
                     }
-
+                    
                     return originalAcquireContext(canvas, config);
                 };
             }
-
+            
             // Improve modal handling for iOS
             const modals = document.querySelectorAll('.modal');
-
+            
             modals.forEach(modal => {
                 const closeModal = () => {
                     modal.style.display = 'none';
                     document.body.classList.remove('modal-open');
                 };
-
+                
                 const openModal = () => {
                     modal.style.display = 'flex';
                     document.body.classList.add('modal-open');
-
+                    
                     // Scroll to top of modal
                     const modalContent = modal.querySelector('.modal-content');
                     if (modalContent) {
@@ -1673,14 +1519,14 @@
                         }, 10);
                     }
                 };
-
+                
                 // Override any existing click handlers
                 modal.onclick = function(event) {
                     if (event.target === modal) {
                         closeModal();
                     }
                 };
-
+                
                 // Fix modal button for iOS
                 const relatedButton = document.querySelector(`[data-modal="${modal.id}"]`);
                 if (relatedButton) {
