@@ -12,6 +12,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Preload critical images -->
+    <link rel="preload" as="image" href="optimized-images/images/valorant.jpg">
+    <link rel="preload" as="image" href="optimized-images/images/csgo.jpg">
+    <link rel="preload" as="image" href="optimized-images/images/pubg.jpg">
+    <link rel="preload" as="image" href="optimized-images/images/lol.jpg">
     <script>
         // Fix for "exports is not defined" errors
         if (typeof exports === 'undefined') {
@@ -216,7 +222,7 @@
                 </div>
                 <div class="game-grid">
                     <div class="game-card" data-game="valorant">
-                        <div class="game-image" style="background-image: url('images/valorant.jpg'); background-size: cover; background-position: center; height: 100px;"></div>
+                        <div class="game-image" style="background-image: url('images/valorant.jpg'); background-size: cover; background-position: center; height: 100px;" loading="eager"></div>
                         <div class="game-name">Valorant</div>
                     </div>
                     <div class="game-card" data-game="csgo">
@@ -232,7 +238,7 @@
                         <div class="game-name">Liên Minh Huyền Thoại</div>
                     </div>
                     <div class="game-card" data-game="gta-v">
-                        <div class="game-image" style="background-image: url('images/gta-v.jpg'); background-size: cover; background-position: center; height: 100px;"></div>
+                        <div class="game-image" style="background-image: url('images/gta-v.jpg'); background-size: cover; background-position: center; height: 100px;" loading="lazy"></div>
                         <div class="game-name">GTA V</div>
                     </div>
                     <div class="game-card" data-game="elden-ring">

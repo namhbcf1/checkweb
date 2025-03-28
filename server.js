@@ -26,6 +26,14 @@ app.use((req, res, next) => {
     next();
 });
 
+// Serve optimized images with aggressive caching
+app.use('/optimized-images', express.static(path.join(__dirname, 'optimized-images'), {
+    maxAge: '7d', // Cache for 7 days
+    etag: true,
+    immutable: true,
+    lastModified: true
+}));
+
 // Serve static files with caching
 app.use(express.static(path.join(__dirname), {
     maxAge: '1d',
