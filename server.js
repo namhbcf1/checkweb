@@ -34,10 +34,21 @@ app.use('/optimized-images', express.static(path.join(__dirname, 'optimized-imag
     lastModified: true
 }));
 
-// Serve static files with caching
+// Serve static files with improved caching strategy
 app.use(express.static(path.join(__dirname), {
-    maxAge: '1d',
-    etag: true
+    maxAge: '7d',
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, path) => {
+        // CSS, JS files get longer cache time
+        if (path.endsWith('.css') || path.endsWith('.js')) {
+            res.setHeader('Cache-Control', 'public, max-age=604800'); // 7 days
+        }
+        // HTML files shouldn't be cached as long
+        else if (path.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'public, max-age=43200'); // 12 hours
+        }
+    }
 }));
 
 app.use(express.json());
