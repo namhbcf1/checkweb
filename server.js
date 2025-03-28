@@ -17,6 +17,24 @@ const compressionOptions = {
 app.use(compression(compressionOptions)); // Bật nén gzip với cấu hình tối ưu
 app.use(cors());
 
+// Middleware cho custom domain
+app.use((req, res, next) => {
+  // Xử lý header cho custom domain
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  
+  // Middleware để xử lý các request từ Cloudflare Tunnel
+  if (req.headers['x-forwarded-proto'] === 'https' || 
+      req.headers['x-forwarded-proto'] === 'http' ||
+      req.headers['cf-visitor']) {
+    // Đã đi qua Cloudflare Tunnel
+    console.log('Request via Cloudflare Tunnel');
+  }
+  
+  next();
+});
+
 // Cache control cho các file tĩnh
 const staticOptions = {
   etag: true, // Bật etag
