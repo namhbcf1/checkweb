@@ -1939,68 +1939,52 @@ footer {
     font-size: 0.9rem;
 }
 
-/* Responsive & iOS Safari Optimization */
-@media (max-width: 768px) {
-    .components-grid {
-        grid-template-columns: 1fr;
+/* Cross-device desktop view compatibility */
+html, body {
+    min-width: 1400px;
+    width: auto !important;
+    overflow-x: auto;
+}
+
+.container {
+    min-width: 1200px;
+}
+
+/* Force desktop view on all devices */
+@media screen and (max-width: 1400px) {
+    body {
+        width: 1400px !important;
+        margin: 0;
+        padding: 0;
     }
     
     .main-container {
-        padding: 10px;
+        width: 1400px;
+        max-width: none;
+        margin: 0 auto;
+        padding: 20px;
     }
-    
-    .selection-section {
-        padding: 15px;
-    }
-    
-    .game-grid {
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    }
-    
-    .action-button {
-        width: 100%;
-        margin: 5px 0;
-    }
-    
-    .component-card {
-        width: 100%;
-    }
-    
-    .modal-content {
-        width: 95%;
-        margin: 10% auto;
-    }
-    
-    .chart-container {
-        height: 250px;
-    }
-    
-    .cpu-brand-selection {
-        gap: 15px;
-    }
+}
 
-    .brand-option {
-        width: 130px;
-        height: 130px;
-    }
+/* Fix for iOS specifically - prevent zooming */
+input, select, textarea, button {
+    font-size: 16px; /* Prevent zoom on focus in iOS */
+}
 
-    .button-group {
-        flex-direction: column;
-    }
-
-    .progress-step .step-label {
-        font-size: 0.7rem;
-    }
-
-    header .contact-buttons {
-        flex-direction: column;
-        gap: 10px;
+/* Hide mobile Safari UI elements */
+@supports (-webkit-touch-callout: none) {
+    /* iOS Safari */
+    body {
+        -webkit-text-size-adjust: 100%;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
     }
     
-    header .phone-number,
-    header .contact-buttons a {
-        width: 80%;
-        justify-content: center;
+    /* Enhanced desktop experience for touch */
+    button, .action-button, .contact-button, 
+    select, .game-card, .brand-option {
+        cursor: pointer;
+        min-height: 44px; /* Better touch targets */
     }
 }
 

@@ -42,22 +42,43 @@ const staticOptions = {
 // Phục vụ files tĩnh với cấu hình cache
 app.use(express.static('.', staticOptions));
 
+// Middleware to set security headers and mobile compatibility
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'same-origin');
+
+    // Force desktop view
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+
+    // Check if request is from mobile browser
+    const userAgent = req.headers['user-agent'] || '';
+    if (/iPhone|iPad|iPod|Android/i.test(userAgent)) {
+        // Add headers to help mobile browsers display desktop view
+        res.setHeader('X-UA-Compatible', 'IE=edge,chrome=1');
+    }
+
+    next();
+});
+
+
 // Thiết lập header bảo mật và tối ưu cho mobile
 app.use((req, res, next) => {
   // Responsive design headers
   res.setHeader('X-UA-Compatible', 'IE=edge');
 
   // Bảo mật
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  //res.setHeader('X-Content-Type-Options', 'nosniff');
+  //res.setHeader('X-Frame-Options', 'SAMEORIGIN');
 
   // Tối ưu cho Safari và iOS
   res.setHeader('Content-Security-Policy', "default-src 'self' cdnjs.cloudflare.com unpkg.com cdn.jsdelivr.net 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * data: blob:;");
-  
+
   // Thêm header đặc biệt cho iOS
   res.setHeader('X-Apple-Mobile-Web-App-Capable', 'yes');
   res.setHeader('X-Apple-Mobile-Web-App-Status-Bar-Style', 'black-translucent');
-  
+
   // Cache-Control optimized for mobile
   if (req.path.match(/\.(css|js)$/)) {
     res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day for CSS/JS
@@ -73,12 +94,12 @@ app.use((req, res, next) => {
   const userAgent = req.headers['user-agent'] || '';
   req.isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|Windows Phone/i.test(userAgent);
   req.isSafariIOS = /iPhone|iPad|iPod/i.test(userAgent) && /WebKit/i.test(userAgent) && !/CriOS|FxiOS|OPiOS/i.test(userAgent);
-  
+
   // Log user agent for debugging
   if (req.isSafariIOS && req.path === '/') {
     console.log('Safari iOS detected:', userAgent);
   }
-  
+
   next();
 });
 
