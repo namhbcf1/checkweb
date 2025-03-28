@@ -3,19 +3,11 @@
 
 <head>
     <meta charset="UTF-8">
-    <!-- Cấu hình viewport cho desktop view trên mọi thiết bị -->
-    <meta name="viewport" content="width=1400, initial-scale=1.0">
+    <!-- Cấu hình viewport tối ưu cho Safari iOS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="format-detection" content="telephone=no">
     <title>BUILD PC TRUONG PHAT COMPUTER - Chọn Linh Kiện Máy Tính</title>
-    <!-- Custom domain meta tags -->
-    <meta name="description" content="Xây dựng cấu hình PC theo nhu cầu và ngân sách tại TRUONG PHAT COMPUTER">
-    <meta property="og:title" content="BUILD PC TRUONG PHAT COMPUTER">
-    <meta property="og:description" content="Chọn linh kiện máy tính phù hợp với nhu cầu và ngân sách">
-    <meta property="og:url" content="https://tpcom.id.vn/">
-    <meta property="og:type" content="website">
-    <link rel="canonical" href="https://tpcom.id.vn/">
     <link rel="stylesheet" href="./buildsan.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="./styles.css">
@@ -378,51 +370,6 @@
         <div class="header-wrapper">
             <div class="logo-container">
                 <div class="logo">
-
-    <!-- Script to force desktop view on mobile devices -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Detect if running on mobile
-            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-            
-            if (isMobile) {
-                // Force desktop view
-                const viewport = document.querySelector('meta[name="viewport"]');
-                if (viewport) {
-                    // Set fixed width viewport to simulate desktop
-                    viewport.setAttribute('content', 'width=1400, initial-scale=1.0');
-                }
-                
-                // Add class to body for mobile-specific adjustments
-                document.body.classList.add('desktop-view-on-mobile');
-                
-                // Prevent zooming
-                document.addEventListener('touchstart', function(e) {
-                    if (e.touches.length > 1) {
-                        e.preventDefault();
-                    }
-                }, { passive: false });
-                
-                // Allow horizontal scrolling on mobile
-                document.body.style.overflowX = 'auto';
-                
-                // Add helper message for first-time visitors
-                const helpMsg = document.createElement('div');
-                helpMsg.className = 'mobile-helper-message';
-                helpMsg.innerHTML = '<p>Bạn đang xem ở chế độ máy tính. Cuộn ngang để xem đầy đủ.</p>';
-                helpMsg.style.cssText = 'position:fixed;bottom:0;left:0;width:100%;background:#ff9800;color:#fff;padding:10px;text-align:center;z-index:9999;font-weight:bold;';
-                document.body.appendChild(helpMsg);
-                
-                // Auto-hide helper message after 5 seconds
-                setTimeout(() => {
-                    helpMsg.style.opacity = '0';
-                    helpMsg.style.transition = 'opacity 0.5s ease';
-                    setTimeout(() => helpMsg.remove(), 500);
-                }, 5000);
-            }
-        });
-    </script>
-
                     <i class="fas fa-desktop"></i>
                     <span>TRUONG PHAT COMPUTER</span>
                     <div class="logo-glow"></div>
