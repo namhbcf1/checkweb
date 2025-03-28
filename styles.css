@@ -2007,16 +2007,10 @@ footer {
 /* Safari iOS Specific */
 @supports (-webkit-touch-callout: none) {
     /* Áp dụng cho iOS */
-    html, body {
-        position: relative;
-        height: 100%;
-        width: 100%;
-        overflow-x: hidden;
+    body {
         -webkit-overflow-scrolling: touch; /* Cuộn mượt trên iOS */
         -webkit-tap-highlight-color: transparent; /* Tắt hiệu ứng highlight khi touch */
         touch-action: manipulation; /* Loại bỏ delay 300ms trên iOS */
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
     }
     
     /* Đảm bảo các nút bấm có kích thước tối thiểu cho touch */
@@ -2024,132 +2018,49 @@ footer {
     .action-button, 
     .contact-button, 
     select, 
-    .game-card,
-    .brand-option {
+    .game-card {
         min-height: 44px; /* Kích thước tối thiểu để dễ bấm trên iOS */
-        touch-action: manipulation;
-        cursor: pointer;
-    }
-    
-    /* Fixed position elements on iOS Safari */
-    header, footer, .fixed-bottom, .to-top-button {
-        position: relative; /* Switch to fixed using JS when needed */
-        transform: translate3d(0,0,0); /* Ensure elements use GPU */
-        -webkit-transform: translate3d(0,0,0);
-        z-index: 100;
     }
     
     /* Cải thiện hiệu suất cuộn */
-    .container,
     .components-grid,
     .game-grid,
     .performance-section,
-    .modal-body,
-    .dropdown {
+    .modal-body {
         will-change: transform; /* Gợi ý trình duyệt tối ưu hiệu năng */
-        transform: translate3d(0,0,0); /* Force GPU acceleration */
-        -webkit-transform: translate3d(0,0,0);
+        transform: translateZ(0); /* Force GPU acceleration */
         -webkit-backface-visibility: hidden; /* Tối ưu hiệu suất */
-        backface-visibility: hidden;
-        -webkit-perspective: 1000;
-        perspective: 1000;
-    }
-    
-    /* Prevent content overflow issues */
-    .container {
-        overflow-x: hidden;
-        width: 100%;
-        max-width: 100vw;
     }
     
     /* Fix cho các animation trên Safari iOS */
     @keyframes safari-friendly-animation {
-        0% { transform: translate3d(0,0,0); }
-        100% { transform: translate3d(0,0,0); }
+        0% { transform: translateZ(0); }
+        100% { transform: translateZ(0); }
     }
     
-    /* Fix iOS form elements */
-    select, input, button, textarea, .dropdown, .game-card {
-        -webkit-appearance: none;
-        appearance: none;
-        border-radius: 8px;
-        font-size: 16px; /* Prevent zoom on focus */
-    }
-    
-    /* Improve dropdown styling for iOS */
+    /* Fix các vấn đề với select dropdown trên iOS */
     select {
+        -webkit-appearance: none;
         background-position: right 10px center; 
         padding-right: 30px;
-        padding-top: 12px;
-        padding-bottom: 12px;
-        border: 1px solid rgba(0,0,0,0.2);
+        border-radius: 8px;
     }
     
-    /* iOS modal improvements */
+    /* Fix cho modal trên iOS */
     .modal-content {
         -webkit-overflow-scrolling: touch;
-        max-height: 85vh; /* Avoid overflow issues */
     }
     
-    /* Fix game grid overflow */
-    .game-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        gap: 15px;
-        width: 100%;
-        overflow-x: hidden;
+    /* Tối ưu input fields trên iOS */
+    input {
+        -webkit-appearance: none;
+        border-radius: 8px;
     }
     
-    /* Increase touch targets */
-    .progress-step, 
-    .component-header, 
-    .game-card,
-    .brand-option,
-    .close-modal,
-    .close-alert {
-        padding: 12px;
-        touch-action: manipulation;
-    }
-    
-    /* Fix scrolling issues */
-    .modal-body, .components-grid {
-        -webkit-overflow-scrolling: touch;
-        max-height: 80vh;
-    }
-    
-    /* Fix iOS performance issues */
-    * {
-        -webkit-transform-style: flat;
-        transform-style: flat;
-    }
-    
-    /* Fix iOS shadow rendering */
-    .action-button, .component, .modal-content, .game-card {
-        -webkit-filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); 
-        filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
-        border: 1px solid rgba(0,0,0,0.1);
-    }
-    
-    /* Cấu trúc lại modal để hoạt động tốt trên iOS */
-    .modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        z-index: 9999;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-    }
-    
-    /* Prevent bounce effect causing issues */
-    body.modal-open {
-        overflow: hidden;
-        position: fixed;
-        width: 100%;
-        height: 100%;
+    /* Tối ưu hiệu suất của fixed position elements */
+    .to-top-button,
+    .fixed-bottom {
+        -webkit-transform: translateZ(0);
     }
 }
 

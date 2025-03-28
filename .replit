@@ -26,12 +26,3 @@ args = "npm install"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "NODE_ENV=production node server.js"
-
-[[workflows.workflow]]
-name = "Optimize Images"
-author = 40947188
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node image-optimizer.js"
