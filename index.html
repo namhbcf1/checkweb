@@ -17,6 +17,13 @@
     <script>
         // Safari iOS compatibility layer
         (function() {
+            // Safari iOS detection
+            const isSafariIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) && 
+                                /WebKit/i.test(navigator.userAgent) && 
+                                !/CriOS|FxiOS|OPiOS|mercury/i.test(navigator.userAgent);
+            
+            console.log("Safari iOS detection:", isSafariIOS);
+            
             // Fix for "exports is not defined" errors
             if (typeof exports === 'undefined') {
                 window.exports = {};
@@ -27,6 +34,17 @@
             if (typeof require === 'undefined') {
                 window.require = function(module) {
                     console.log('Mock require called for:', module);
+                    if (module === '@popperjs/core') {
+                        return { 
+                            createPopper: function() { 
+                                return {
+                                    update: function() {},
+                                    destroy: function() {},
+                                    forceUpdate: function() {}
+                                }; 
+                            }
+                        };
+                    }
                     return {};
                 };
             }
@@ -41,120 +59,147 @@
             }
             
             // Prevent Safari from infinite recursion issues
-            const MAX_CACHED_ELEMENTS = 1000; // Limit cache size to prevent memory leaks
-            const computedStyleCache = new Map();
-            
-            // Safe original method storage
-            const originalGetComputedStyle = window.getComputedStyle;
-            
-            // Override with a safer implementation for Safari
-            window.getComputedStyle = function(element, pseudoElt) {
-                if (!element) return null;
-                
-                // Generate a cache key
-                const cacheKey = element.tagName + (pseudoElt || '');
-                
-                // Check cache first
-                if (computedStyleCache.has(cacheKey)) {
-                    return computedStyleCache.get(cacheKey);
-                }
-                
+            if (!window._getComputedStylePatched) {
                 try {
-                    // Handle problematic elements that might cause recursion in Safari
-                    if (element instanceof HTMLCanvasElement || 
-                        element instanceof HTMLImageElement ||
-                        element instanceof SVGElement ||
-                        element instanceof HTMLScriptElement ||
-                        element instanceof HTMLIFrameElement) {
-                        
-                        const safeStyle = {
-                            getPropertyValue: function(prop) { return ''; },
-                            setProperty: function() {},
-                            removeProperty: function() {},
-                            item: function() { return ''; },
-                            getPropertyPriority: function() { return ''; },
-                            length: 0
-                        };
-                        
-                        // Limit cache size
-                        if (computedStyleCache.size > MAX_CACHED_ELEMENTS) {
-                            computedStyleCache.clear(); // Reset if too large
+                    // Safe original method storage
+                    window._originalGetComputedStyle = window.getComputedStyle;
+                    
+                    // Create a simplified version that avoids recursion
+                    window.getComputedStyle = function(element, pseudoElt) {
+                        if (!element) {
+                            return { getPropertyValue: function() { return ''; } };
                         }
                         
-                        computedStyleCache.set(cacheKey, safeStyle);
-                        return safeStyle;
-                    }
-                    
-                    // Normal case
-                    const result = originalGetComputedStyle.call(window, element, pseudoElt);
-                    
-                    // Limit cache size
-                    if (computedStyleCache.size > MAX_CACHED_ELEMENTS) {
-                        computedStyleCache.clear();
-                    }
-                    
-                    computedStyleCache.set(cacheKey, result);
-                    return result;
-                } catch (e) {
-                    console.warn('Error in getComputedStyle:', e);
-                    return {
-                        getPropertyValue: function() { return ''; },
-                        setProperty: function() {}
+                        try {
+                            // For problematic elements, return a safe style object
+                            if (!element.tagName || 
+                                element instanceof HTMLCanvasElement || 
+                                element instanceof HTMLImageElement ||
+                                element instanceof SVGElement) {
+                                
+                                return { 
+                                    getPropertyValue: function() { return ''; },
+                                    cssText: '',
+                                    length: 0,
+                                    item: function() { return null; }
+                                };
+                            }
+                            
+                            return window._originalGetComputedStyle(element, pseudoElt);
+                        } catch (e) {
+                            console.warn('Safe getComputedStyle error:', e.message);
+                            return { 
+                                getPropertyValue: function() { return ''; },
+                                cssText: '',
+                                length: 0
+                            };
+                        }
                     };
+                    
+                    window._getComputedStylePatched = true;
+                } catch (e) {
+                    console.error('Failed to patch getComputedStyle:', e);
                 }
-            };
-            
-            // Create safe methods for touch events
-            try {
-                // Fix for Safari issues with passive event listeners
-                const originalAddEventListener = EventTarget.prototype.addEventListener;
-                EventTarget.prototype.addEventListener = function(type, listener, options) {
-                    const safeOptions = options || {};
-                    if (type === 'touchstart' || type === 'touchmove' || type === 'wheel') {
-                        if (typeof safeOptions === 'object') {
-                            safeOptions.passive = safeOptions.passive || false;
-                        }
-                    }
-                    return originalAddEventListener.call(this, type, listener, safeOptions);
-                };
-            } catch (e) {
-                console.warn('Failed to patch addEventListener:', e);
             }
             
-            // Prevent problematic property assignments
-            const readOnlyProps = ['top', 'parent', 'self', 'window', 'frames', 'location'];
-            readOnlyProps.forEach(prop => {
-                try {
-                    // Create safe accessors
-                    const originalValue = window[prop];
-                    let safeValue = originalValue;
+            // Fix for Safari iOS touch events
+            try {
+                // Make touchstart/touchmove events non-passive by default
+                if (!window._touchEventsPatched) {
+                    const originalAddEventListener = EventTarget.prototype.addEventListener;
                     
-                    Object.defineProperty(window, prop + '_safe', {
-                        get: function() { return safeValue; },
-                        set: function(val) { safeValue = val; },
-                        configurable: true
+                    EventTarget.prototype.addEventListener = function(type, listener, options) {
+                        let safeOptions = options;
+                        
+                        // Make touch events non-passive by default
+                        if (type === 'touchstart' || type === 'touchmove') {
+                            if (options === undefined || options === null) {
+                                safeOptions = { passive: false };
+                            } else if (typeof options === 'object' && options.passive === undefined) {
+                                safeOptions = Object.assign({}, options, { passive: false });
+                            }
+                        }
+                        
+                        return originalAddEventListener.call(this, type, listener, safeOptions);
+                    };
+                    
+                    window._touchEventsPatched = true;
+                }
+            } catch (e) {
+                console.error('Failed to patch touch events:', e);
+            }
+            
+            // Prevent touch delay on iOS Safari
+            if (isSafariIOS) {
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Prevent zoom on double tap
+                    let lastTouchEnd = 0;
+                    document.documentElement.addEventListener('touchend', function(e) {
+                        const now = Date.now();
+                        if (now - lastTouchEnd < 300) {
+                            e.preventDefault();
+                        }
+                        lastTouchEnd = now;
+                    }, { passive: false });
+                    
+                    // Disable user select and callout on elements
+                    const style = document.createElement('style');
+                    style.innerHTML = `
+                        body, .no-callout {
+                            -webkit-touch-callout: none;
+                            -webkit-user-select: none;
+                            -khtml-user-select: none;
+                            -moz-user-select: none;
+                            -ms-user-select: none;
+                            user-select: none;
+                            -webkit-tap-highlight-color: rgba(0,0,0,0);
+                        }
+                        
+                        input, textarea {
+                            -webkit-user-select: auto;
+                            user-select: auto;
+                        }
+                    `;
+                    document.head.appendChild(style);
+                    
+                    // Fix for potential CSS transform issues on iOS
+                    const allElements = document.querySelectorAll('.dropdown, .game-card, button, .component');
+                    allElements.forEach(el => {
+                        el.style.willChange = 'transform';
+                        el.style.transform = 'translateZ(0)';
+                        el.style.backfaceVisibility = 'hidden';
                     });
-                } catch (e) {
-                    console.warn(`Could not create safe property for ${prop}:`, e);
-                }
-            });
+                });
+            }
             
-            // iOS-specific touch event improvements
-            document.addEventListener('touchmove', function(e) {
-                if (e.scale !== 1) {
-                    e.preventDefault();
-                }
-            }, { passive: false });
+            // Safe polyfill for any missing browser functions
+            if (!window.requestAnimationFrame) {
+                window.requestAnimationFrame = function(callback) {
+                    return setTimeout(callback, 1000 / 60);
+                };
+            }
             
-            // Prevent double-tap zoom on iOS Safari
-            let lastTouchEnd = 0;
-            document.addEventListener('touchend', function(e) {
-                const now = Date.now();
-                if (now - lastTouchEnd < 300) {
-                    e.preventDefault();
-                }
-                lastTouchEnd = now;
-            }, { passive: false });
+            if (!window.cancelAnimationFrame) {
+                window.cancelAnimationFrame = function(id) {
+                    clearTimeout(id);
+                };
+            }
+            
+            // Fix for older browsers that don't support classList on SVG elements
+            if (!('classList' in SVGElement.prototype)) {
+                Object.defineProperty(SVGElement.prototype, 'classList', {
+                    get: function() {
+                        return {
+                            contains: function(className) {
+                                return false;
+                            },
+                            add: function() {},
+                            remove: function() {},
+                            toggle: function() { return false; }
+                        };
+                    }
+                });
+            }
         })();
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -1299,6 +1344,199 @@
                 }
             };
         });
+    </script>
+    
+    <!-- Safari iOS Specific Enhancements -->
+    <script>
+        // Detect Safari iOS
+        const isSafariIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) && 
+                           /WebKit/i.test(navigator.userAgent) && 
+                           !/CriOS|FxiOS|OPiOS|mercury/i.test(navigator.userAgent);
+                           
+        if (isSafariIOS) {
+            console.log("Safari iOS detected, applying optimizations");
+            
+            // Fix known Safari iOS issues
+            document.addEventListener('DOMContentLoaded', function() {
+                // Fix modal issues
+                const modals = document.querySelectorAll('.modal');
+                const closeModalButtons = document.querySelectorAll('.close-modal');
+                
+                closeModalButtons.forEach(button => {
+                    button.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        const modal = this.closest('.modal');
+                        if (modal) {
+                            modal.style.display = 'none';
+                            document.body.classList.remove('modal-open');
+                        }
+                    });
+                });
+                
+                // Fix select dropdowns
+                const selectElements = document.querySelectorAll('select');
+                selectElements.forEach(select => {
+                    select.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        // Force focus and open the dropdown
+                        this.focus();
+                    });
+                });
+                
+                // Optimize game cards
+                const gameCards = document.querySelectorAll('.game-card');
+                gameCards.forEach(card => {
+                    // Use touchend instead of click for better responsiveness
+                    card.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        gameCards.forEach(c => c.classList.remove('selected'));
+                        this.classList.add('selected');
+                        
+                        const gameGenreDropdown = document.getElementById('game-genre');
+                        if (gameGenreDropdown) {
+                            gameGenreDropdown.value = this.dataset.game;
+                            const changeEvent = new Event('change', { bubbles: true });
+                            gameGenreDropdown.dispatchEvent(changeEvent);
+                        }
+                    });
+                });
+                
+                // Optimize CPU brand selection
+                const intelOption = document.getElementById('intel-option');
+                const amdOption = document.getElementById('amd-option');
+                
+                if (intelOption) {
+                    intelOption.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        intelOption.classList.add('selected');
+                        if (amdOption) amdOption.classList.remove('selected');
+                        
+                        const cpuTypeDropdown = document.getElementById('cpu-type');
+                        if (cpuTypeDropdown) {
+                            cpuTypeDropdown.value = 'Intel';
+                            const changeEvent = new Event('change', { bubbles: true });
+                            cpuTypeDropdown.dispatchEvent(changeEvent);
+                        }
+                    });
+                }
+                
+                if (amdOption) {
+                    amdOption.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        amdOption.classList.add('selected');
+                        if (intelOption) intelOption.classList.remove('selected');
+                        
+                        const cpuTypeDropdown = document.getElementById('cpu-type');
+                        if (cpuTypeDropdown) {
+                            cpuTypeDropdown.value = 'Amd';
+                            const changeEvent = new Event('change', { bubbles: true });
+                            cpuTypeDropdown.dispatchEvent(changeEvent);
+                        }
+                    });
+                }
+                
+                // Ensure all buttons are big enough for touch
+                const allButtons = document.querySelectorAll('button, .action-button, .contact-button');
+                allButtons.forEach(button => {
+                    if (button.offsetHeight < 44) {
+                        button.style.minHeight = '44px';
+                    }
+                    if (button.offsetWidth < 44) {
+                        button.style.minWidth = '44px';
+                    }
+                });
+                
+                // Ensure select elements have enough padding
+                const allSelects = document.querySelectorAll('select');
+                allSelects.forEach(select => {
+                    select.style.paddingTop = '12px';
+                    select.style.paddingBottom = '12px';
+                    select.style.paddingLeft = '12px';
+                    select.style.fontSize = '16px'; // Prevent zoom on iOS
+                });
+                
+                // Fix potential issues with slider
+                const sliders = document.querySelectorAll('input[type="range"]');
+                sliders.forEach(slider => {
+                    slider.style.webkitAppearance = 'none';
+                    slider.style.height = '10px';
+                    
+                    // Better thumb for iOS
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        input[type="range"]::-webkit-slider-thumb {
+                            -webkit-appearance: none;
+                            width: 28px;
+                            height: 28px;
+                            border-radius: 50%;
+                            background: var(--accent-color, #ff4757);
+                            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                        }
+                    `;
+                    document.head.appendChild(style);
+                });
+            });
+            
+            // Fix any chart rendering issues for iOS
+            if (typeof Chart !== 'undefined') {
+                const originalAcquireContext = Chart.helpers.acquireContext;
+                Chart.helpers.acquireContext = function(canvas, config) {
+                    const context = canvas.getContext('2d');
+                    const backingStoreRatio = context.webkitBackingStorePixelRatio || 1;
+                    const devicePixelRatio = window.devicePixelRatio || 1;
+                    const ratio = devicePixelRatio / backingStoreRatio;
+                    
+                    if (ratio > 1) {
+                        canvas.style.width = canvas.width + 'px';
+                        canvas.style.height = canvas.height + 'px';
+                        canvas.width *= ratio;
+                        canvas.height *= ratio;
+                        context.scale(ratio, ratio);
+                    }
+                    
+                    return originalAcquireContext(canvas, config);
+                };
+            }
+            
+            // Improve modal handling for iOS
+            const modals = document.querySelectorAll('.modal');
+            
+            modals.forEach(modal => {
+                const closeModal = () => {
+                    modal.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                };
+                
+                const openModal = () => {
+                    modal.style.display = 'flex';
+                    document.body.classList.add('modal-open');
+                    
+                    // Scroll to top of modal
+                    const modalContent = modal.querySelector('.modal-content');
+                    if (modalContent) {
+                        setTimeout(() => {
+                            modalContent.scrollTop = 0;
+                        }, 10);
+                    }
+                };
+                
+                // Override any existing click handlers
+                modal.onclick = function(event) {
+                    if (event.target === modal) {
+                        closeModal();
+                    }
+                };
+                
+                // Fix modal button for iOS
+                const relatedButton = document.querySelector(`[data-modal="${modal.id}"]`);
+                if (relatedButton) {
+                    relatedButton.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        openModal();
+                    });
+                }
+            });
+        }
     </script>
 </body>
 

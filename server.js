@@ -13,16 +13,32 @@ app.use(compression({ level: 6, threshold: 0 }));
 // Configure CORS
 app.use(cors({
     origin: '*',
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type']
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'User-Agent', 'Accept', 'X-Requested-With'],
+    credentials: true
 }));
 
 // Add security headers and Safari iOS specific headers
 app.use((req, res, next) => {
+    // Security headers
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('X-XSS-Protection', '1; mode=block');
+    
+    // Safari iOS optimizations
     res.setHeader('Cache-Control', 'public, max-age=86400'); // Add caching for better performance
+    
+    // Check for Safari iOS
+    const userAgent = req.headers['user-agent'] || '';
+    const isSafariIOS = userAgent.includes('Safari') && (userAgent.includes('iPhone') || userAgent.includes('iPad'));
+    
+    if (isSafariIOS) {
+        // Add specific headers for Safari on iOS
+        res.setHeader('X-Safari-Compatible', 'true');
+        // Shorter cache time for Safari on iOS to avoid stale content issues
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+    }
+    
     next();
 });
 
