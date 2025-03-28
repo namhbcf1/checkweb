@@ -17,10 +17,14 @@
     <script>
         // Safari iOS compatibility layer
         (function() {
-            // Safari iOS detection
-            const isSafariIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) && 
-                                /WebKit/i.test(navigator.userAgent) && 
-                                !/CriOS|FxiOS|OPiOS|mercury/i.test(navigator.userAgent);
+            // Safari iOS detection - cải thiện độ chính xác
+            const isSafariIOS = (function() {
+                const ua = window.navigator.userAgent;
+                const iOS = !!ua.match(/iPad/i) || !!ua.match(/iPhone/i) || !!ua.match(/iPod/i);
+                const webkit = !!ua.match(/WebKit/i);
+                const iOSSafari = iOS && webkit && !ua.match(/CriOS/i) && !ua.match(/FxiOS/i) && !ua.match(/OPiOS/i);
+                return iOSSafari;
+            })();
             
             console.log("Safari iOS detection:", isSafariIOS);
             
@@ -58,61 +62,83 @@
                 };
             }
             
-            // Prevent Safari from infinite recursion issues
+            // Ngăn chặn lỗi tràn bộ nhớ đệm trong Safari - sửa đổi quan trọng
             if (!window._getComputedStylePatched) {
                 try {
-                    // Safe original method storage
-                    window._originalGetComputedStyle = window.getComputedStyle;
+                    const originalGetComputedStyle = window.getComputedStyle;
                     
-                    // Create a simplified version that avoids recursion
+                    // Cache kết quả để tránh vòng lặp vô hạn
+                    const styleCache = new WeakMap();
+                    
                     window.getComputedStyle = function(element, pseudoElt) {
                         if (!element) {
-                            return { getPropertyValue: function() { return ''; } };
-                        }
-                        
-                        try {
-                            // For problematic elements, return a safe style object
-                            if (!element.tagName || 
-                                element instanceof HTMLCanvasElement || 
-                                element instanceof HTMLImageElement ||
-                                element instanceof SVGElement) {
-                                
-                                return { 
-                                    getPropertyValue: function() { return ''; },
-                                    cssText: '',
-                                    length: 0,
-                                    item: function() { return null; }
-                                };
-                            }
-                            
-                            return window._originalGetComputedStyle(element, pseudoElt);
-                        } catch (e) {
-                            console.warn('Safe getComputedStyle error:', e.message);
                             return { 
                                 getPropertyValue: function() { return ''; },
                                 cssText: '',
                                 length: 0
                             };
                         }
+                        
+                        // Trả về từ cache nếu có
+                        if (styleCache.has(element)) {
+                            return styleCache.get(element);
+                        }
+                        
+                        try {
+                            // Xử lý đặc biệt cho các phần tử có vấn đề
+                            if (!element.tagName || 
+                                (element instanceof HTMLCanvasElement) || 
+                                (element instanceof HTMLImageElement) ||
+                                (element instanceof SVGElement)) {
+                                
+                                const safeStyle = { 
+                                    getPropertyValue: function() { return ''; },
+                                    cssText: '',
+                                    length: 0,
+                                    item: function() { return null; }
+                                };
+                                
+                                styleCache.set(element, safeStyle);
+                                return safeStyle;
+                            }
+                            
+                            // Lấy giá trị thật từ phương thức gốc
+                            const style = originalGetComputedStyle.call(window, element, pseudoElt);
+                            
+                            // Cache kết quả
+                            styleCache.set(element, style);
+                            return style;
+                        } catch (e) {
+                            console.warn('Lỗi getComputedStyle an toàn:', e.message);
+                            
+                            const safeStyle = { 
+                                getPropertyValue: function() { return ''; },
+                                cssText: '',
+                                length: 0
+                            };
+                            
+                            styleCache.set(element, safeStyle);
+                            return safeStyle;
+                        }
                     };
                     
                     window._getComputedStylePatched = true;
                 } catch (e) {
-                    console.error('Failed to patch getComputedStyle:', e);
+                    console.error('Không thể áp dụng patch cho getComputedStyle:', e);
                 }
             }
             
-            // Fix for Safari iOS touch events
+            // Sửa lỗi sự kiện chạm trên Safari iOS
             try {
-                // Make touchstart/touchmove events non-passive by default
+                // Làm cho sự kiện chạm luôn non-passive để có thể gọi preventDefault()
                 if (!window._touchEventsPatched) {
                     const originalAddEventListener = EventTarget.prototype.addEventListener;
                     
                     EventTarget.prototype.addEventListener = function(type, listener, options) {
                         let safeOptions = options;
                         
-                        // Make touch events non-passive by default
-                        if (type === 'touchstart' || type === 'touchmove') {
+                        // Đảm bảo sự kiện chạm không bị giới hạn bởi passive
+                        if (type === 'touchstart' || type === 'touchmove' || type === 'touchend') {
                             if (options === undefined || options === null) {
                                 safeOptions = { passive: false };
                             } else if (typeof options === 'object' && options.passive === undefined) {
@@ -124,17 +150,20 @@
                     };
                     
                     window._touchEventsPatched = true;
+                    console.log("Touch events patched successfully");
                 }
             } catch (e) {
-                console.error('Failed to patch touch events:', e);
+                console.error('Không thể áp dụng patch cho sự kiện chạm:', e);
             }
             
-            // Prevent touch delay on iOS Safari
+            // Sửa đổi cho iOS Safari
             if (isSafariIOS) {
                 document.addEventListener('DOMContentLoaded', function() {
-                    // Prevent zoom on double tap
+                    console.log("Applying iOS specific fixes");
+                    
+                    // Ngăn chặn zoom khi nhấp đúp
                     let lastTouchEnd = 0;
-                    document.documentElement.addEventListener('touchend', function(e) {
+                    document.addEventListener('touchend', function(e) {
                         const now = Date.now();
                         if (now - lastTouchEnd < 300) {
                             e.preventDefault();
@@ -142,37 +171,116 @@
                         lastTouchEnd = now;
                     }, { passive: false });
                     
-                    // Disable user select and callout on elements
+                    // Vô hiệu hóa hiệu ứng khi chạm và tối ưu hóa hiệu suất
                     const style = document.createElement('style');
                     style.innerHTML = `
+                        html, body {
+                            -webkit-overflow-scrolling: touch;
+                            overflow-x: hidden;
+                            width: 100%;
+                            position: relative;
+                            height: 100%;
+                            touch-action: manipulation;
+                            -webkit-text-size-adjust: 100%;
+                        }
+                        
                         body, .no-callout {
                             -webkit-touch-callout: none;
                             -webkit-user-select: none;
-                            -khtml-user-select: none;
-                            -moz-user-select: none;
-                            -ms-user-select: none;
                             user-select: none;
-                            -webkit-tap-highlight-color: rgba(0,0,0,0);
+                            -webkit-tap-highlight-color: transparent;
                         }
                         
-                        input, textarea {
+                        button, .action-button, .contact-button, select, 
+                        .game-card, .brand-option, .close-modal, .close-alert,
+                        .component-header, .dropdown {
+                            min-height: 44px;
+                            min-width: 44px;
+                            touch-action: manipulation;
+                            -webkit-appearance: none;
+                            appearance: none;
+                        }
+                        
+                        input, textarea, select {
                             -webkit-user-select: auto;
                             user-select: auto;
+                            font-size: 16px; /* Ngăn chặn zoom trên iOS */
+                        }
+                        
+                        /* Sửa lỗi fixed position trên iOS */
+                        .modal {
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            -webkit-overflow-scrolling: touch;
+                            transform: translateZ(0);
+                        }
+                        
+                        .modal-content {
+                            transform: translate3d(0,0,0);
+                            max-height: 80vh;
+                            overflow-y: auto;
+                            -webkit-overflow-scrolling: touch;
+                        }
+                        
+                        /* Cải thiện hiệu năng renderring */
+                        .slider::-webkit-slider-thumb {
+                            -webkit-appearance: none;
+                            width: 28px;
+                            height: 28px;
+                            border-radius: 50%;
+                            background-color: #ff4757;
+                            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
                         }
                     `;
                     document.head.appendChild(style);
                     
-                    // Fix for potential CSS transform issues on iOS
-                    const allElements = document.querySelectorAll('.dropdown, .game-card, button, .component');
-                    allElements.forEach(el => {
+                    // Thay đổi hành vi modals (cần cho iOS)
+                    document.querySelectorAll('.modal').forEach(modal => {
+                        modal.addEventListener('touchmove', function(e) {
+                            e.stopPropagation();
+                        }, { passive: true });
+                        
+                        const modalContent = modal.querySelector('.modal-content');
+                        if (modalContent) {
+                            modalContent.addEventListener('touchmove', function(e) {
+                                e.stopPropagation(); // Cho phép cuộn trong modal
+                            }, { passive: true });
+                        }
+                    });
+                    
+                    // Tối ưu sự kiện chạm cho các menu dropdown
+                    document.querySelectorAll('select').forEach(select => {
+                        select.addEventListener('touchend', function(e) {
+                            // Tự động focus khi chạm
+                            this.focus();
+                        }, { passive: false });
+                    });
+                    
+                    // Tối ưu cho các nút bấm trên iOS
+                    document.querySelectorAll('button, .action-button, .game-card, .brand-option').forEach(el => {
+                        // Sử dụng GPU để render
                         el.style.willChange = 'transform';
                         el.style.transform = 'translateZ(0)';
+                        el.style.webkitBackfaceVisibility = 'hidden';
                         el.style.backfaceVisibility = 'hidden';
+                        
+                        // Thêm sự kiện touchend để khắc phục độ trễ 300ms
+                        if (el.className.includes('game-card') || el.className.includes('brand-option')) {
+                            el.addEventListener('touchend', function(e) {
+                                e.preventDefault();
+                                this.click(); // Kích hoạt sự kiện click
+                            }, { passive: false });
+                        }
                     });
+                    
+                    console.log("iOS specific fixes applied");
                 });
             }
             
-            // Safe polyfill for any missing browser functions
+            // Safe polyfill cho các hàm thiếu
             if (!window.requestAnimationFrame) {
                 window.requestAnimationFrame = function(callback) {
                     return setTimeout(callback, 1000 / 60);
@@ -185,7 +293,7 @@
                 };
             }
             
-            // Fix for older browsers that don't support classList on SVG elements
+            // Fix cho các trình duyệt không hỗ trợ classList trên SVG
             if (!('classList' in SVGElement.prototype)) {
                 Object.defineProperty(SVGElement.prototype, 'classList', {
                     get: function() {
@@ -199,6 +307,17 @@
                         };
                     }
                 });
+            }
+            
+            // Khắc phục lỗi window.top
+            try {
+                const topDescriptor = Object.getOwnPropertyDescriptor(window, 'top');
+                if (topDescriptor && !topDescriptor.configurable) {
+                    console.log("Property top is read-only, applying fix");
+                    window.safeTop = window.top;
+                }
+            } catch (e) {
+                console.warn("Cannot access 'top' property descriptor");
             }
         })();
     </script>
